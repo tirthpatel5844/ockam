@@ -89,18 +89,18 @@ pub trait ProfileSecrets {
 #[async_trait]
 pub trait SecureChannelTrait {
     /// Create mutually authenticated secure channel
-    async fn create_secure_channel(
+    async fn create_secure_channel<R: Into<Route> + Send>(
         &mut self,
         ctx: &Context,
-        route: Route,
+        route: R,
         vault: &Address,
     ) -> Result<Address>;
 
     /// Create mutually authenticated secure channel listener
-    async fn create_secure_channel_listener(
+    async fn create_secure_channel_listener<A: Into<Address> + Send>(
         &mut self,
         ctx: &Context,
-        address: Address,
+        address: A,
         vault: &Address,
     ) -> Result<()>;
 }

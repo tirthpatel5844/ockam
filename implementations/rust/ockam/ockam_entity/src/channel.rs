@@ -16,26 +16,26 @@ pub(crate) use messages::*;
 #[async_trait]
 impl<P: ProfileTrait + Clone> SecureChannelTrait for P {
     /// Create mutually authenticated secure channel
-    async fn create_secure_channel(
+    async fn create_secure_channel<R: Into<Route> + Send>(
         &mut self,
         ctx: &Context,
-        route: Route,
+        route: R,
         vault: &Address,
     ) -> Result<Address> {
         let vault = VaultSync::create_with_worker(ctx, vault)?;
-        Initiator::create(ctx, route, self, vault).await
+        Initiator::create(ctx, route.into(), self, vault).await
     }
 
     /// Create mutually authenticated secure channel listener
-    async fn create_secure_channel_listener(
+    async fn create_secure_channel_listener<A: Into<Address> + Send>(
         &mut self,
         ctx: &Context,
-        address: Address,
+        address: A,
         vault: &Address,
     ) -> Result<()> {
         let vault = VaultSync::create_with_worker(ctx, vault)?;
         let listener = ProfileChannelListener::new(self.clone(), vault);
-        ctx.start_worker(address, listener).await
+        ctx.start_worker(address.into(), listener).await
     }
 }
 
@@ -55,16 +55,12 @@ mod test {
                 let mut alice = Profile::create(&ctx, &vault).await.unwrap();
                 let mut bob = Profile::create(&ctx, &vault).await.unwrap();
 
-                bob.create_secure_channel_listener(&mut ctx, "bob_listener".into(), &vault)
+                bob.create_secure_channel_listener(&mut ctx, "bob_listener", &vault)
                     .await
                     .unwrap();
 
                 let alice_channel = alice
-                    .create_secure_channel(
-                        &mut ctx,
-                        Route::new().append("bob_listener").into(),
-                        &vault,
-                    )
+                    .create_secure_channel(&mut ctx, Route::new().append("bob_listener"), &vault)
                     .await
                     .unwrap();
 
