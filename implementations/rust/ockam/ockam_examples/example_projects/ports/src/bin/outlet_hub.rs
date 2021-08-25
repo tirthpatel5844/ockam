@@ -5,11 +5,11 @@ use ockam::{
 #[ockam::node]
 async fn main(mut ctx: Context) -> Result<()> {
     let vault = Vault::create(&ctx)?;
-    let mut fabric_machine = Entity::create(&ctx, &vault)?;
+    let mut robotic_arm = Entity::create(&ctx, &vault)?;
 
     let tcp = TcpTransport::create(&ctx).await?;
 
-    let channel = fabric_machine.create_secure_channel(
+    let channel = robotic_arm.create_secure_channel(
         route![(TCP, "127.0.0.1:4000"), "secure_channel_listener"],
         TrustEveryonePolicy,
     )?;
