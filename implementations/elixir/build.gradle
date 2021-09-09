@@ -58,6 +58,5 @@ tasks.whenTaskAdded { task ->
   def isCleanTask = task.name.contains('clean') || task.name.contains('veryClean')
   if(!isCleanTask) {
     task.dependsOn(gradle.includedBuild('rust').task(':build_ockam_ockam_ffi'))
-    task.dependsOn(gradle.includedBuild('rust').task(':build_ockam_ockam_vault'))
   }
 }

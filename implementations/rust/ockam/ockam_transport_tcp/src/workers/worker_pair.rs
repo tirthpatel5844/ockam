@@ -11,6 +11,7 @@ use tracing::{debug, trace};
 
 /// Transmit and receive peers of a TCP connection
 #[derive(Debug)]
+#[allow(dead_code)] // TODO: rx_addr and run are never read
 pub(crate) struct WorkerPair {
     hostnames: Vec<String>,
     peer: SocketAddr,
