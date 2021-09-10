@@ -1,5 +1,5 @@
 use crate::atomic::ArcBool;
-use crate::{atomic, PortalWorkerPair};
+use crate::{atomic, TcpPortalWorker};
 use async_trait::async_trait;
 use ockam_core::compat::net::SocketAddr;
 use ockam_core::{Address, Processor, Result, Route};
@@ -10,14 +10,14 @@ use tracing::debug;
 
 pub(crate) struct TcpInletListenProcessor {
     inner: TcpListener,
-    onward_route: Route,
+    ping_route: Route,
     run: ArcBool,
 }
 
 impl TcpInletListenProcessor {
     pub(crate) async fn start(
         ctx: &Context,
-        onward_route: Route,
+        ping_route: Route,
         addr: SocketAddr,
         run: ArcBool,
     ) -> Result<Address> {
@@ -29,7 +29,7 @@ impl TcpInletListenProcessor {
             .map_err(TransportError::from)?;
         let processor = Self {
             inner,
-            onward_route,
+            ping_route,
             run,
         };
 
@@ -48,7 +48,7 @@ impl Processor for TcpInletListenProcessor {
 
         if atomic::check(&self.run) {
             let (stream, peer) = self.inner.accept().await.map_err(TransportError::from)?;
-            PortalWorkerPair::new_inlet(ctx, stream, peer, self.onward_route.clone()).await?;
+            TcpPortalWorker::new_inlet(ctx, stream, peer, self.ping_route.clone()).await?;
 
             Ok(true)
         } else {

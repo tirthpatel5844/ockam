@@ -36,10 +36,15 @@ impl Worker for TcpOutletListenWorker {
         ctx: &mut Self::Context,
         msg: Routed<Self::Message>,
     ) -> Result<()> {
-        let address = self.router_handle.connect_outlet(self.peer.clone()).await?;
+        let ping_route = msg.return_route();
+        let address = self
+            .router_handle
+            .connect_outlet(self.peer.clone(), ping_route)
+            .await?;
 
         debug!("Created Tcp Outlet at {}", &address);
 
+        // FIXME: Race condition
         let msg = TransportMessage::v1(route![address], msg.return_route(), msg.payload().clone());
 
         ctx.forward(LocalMessage::new(msg, vec![])).await?;

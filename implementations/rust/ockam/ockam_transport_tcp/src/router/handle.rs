@@ -1,6 +1,6 @@
 use crate::atomic::ArcBool;
 use crate::{
-    parse_socket_addr, PortalWorkerPair, TcpInletListenProcessor, TcpListenProcessor, WorkerPair,
+    parse_socket_addr, TcpInletListenProcessor, TcpListenProcessor, TcpPortalWorker, WorkerPair,
     TCP,
 };
 use ockam_core::compat::net::{SocketAddr, ToSocketAddrs};
@@ -68,13 +68,13 @@ impl TcpRouterHandle {
     /// Bind an incoming portal inlet connection listener for this router
     pub async fn bind_inlet(
         &self,
-        onward_route: impl Into<Route>,
+        ping_route: impl Into<Route>,
         addr: impl Into<SocketAddr>,
     ) -> Result<Address> {
         let socket_addr = addr.into();
         let addr = TcpInletListenProcessor::start(
             &self.ctx,
-            onward_route.into(),
+            ping_route.into(),
             socket_addr,
             Arc::clone(&self.run),
         )
@@ -127,10 +127,14 @@ impl TcpRouterHandle {
     }
 
     /// Establish an outgoing TCP connection for Portal Outlet
-    pub async fn connect_outlet(&self, peer: impl Into<String>) -> Result<Address> {
+    pub async fn connect_outlet(
+        &self,
+        peer: impl Into<String>,
+        ping_route: Route,
+    ) -> Result<Address> {
         let (peer_addr, _) = Self::resolve_peer(peer)?;
 
-        let address = PortalWorkerPair::new_outlet(&self.ctx, peer_addr).await?;
+        let address = TcpPortalWorker::new_outlet(&self.ctx, peer_addr, ping_route).await?;
 
         Ok(address)
     }

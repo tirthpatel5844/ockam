@@ -1,6 +1,8 @@
 /// A Transport worker specific error type
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum TransportError {
+    /// None
+    None,
     /// Failed to send a malformed message
     SendBadMessage,
     /// Failed to receive a malformed message
@@ -27,6 +29,8 @@ pub enum TransportError {
     Protocol,
     /// A generic I/O failure
     GenericIo,
+    /// PortalInvalidState
+    PortalInvalidState,
 }
 
 impl TransportError {
