@@ -45,6 +45,7 @@ ockam_node_no_std = { path = "../ockam_node_no_std", version = "0.4.0-dev"     ,
 
 #ockam_executor = { path = "/Users/antoine/Ockam/ockam_executor.git", default-features = false, optional = true }
 ockam_executor = { git = "ssh://git@github.com/antoinevg/ockam_executor.git", default-features = false, optional = true }
+cortex-m-semihosting = { version = "0.3.7" }
 
 
 [dev-dependencies]
