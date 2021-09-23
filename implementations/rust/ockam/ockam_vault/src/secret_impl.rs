@@ -1,13 +1,14 @@
 use crate::software_vault::{SoftwareVault, VaultEntry};
 use crate::VaultError;
 use arrayref::array_ref;
-use core::convert::TryInto;
 use ockam_core::compat::boxed::Box;
 use ockam_vault_core::{
     KeyId, KeyIdVault, PublicKey, Secret, SecretAttributes, SecretKey, SecretPersistence,
     SecretType, SecretVault, AES128_SECRET_LENGTH, AES256_SECRET_LENGTH, CURVE25519_SECRET_LENGTH,
 };
+#[cfg(feature = "bls")]
 use signature_bbs_plus::PublicKey as BlsPublicKey;
+#[cfg(feature = "bls")]
 use signature_bbs_plus::SecretKey as BlsSecretKey;
 use zeroize::Zeroize;
 
@@ -37,7 +38,10 @@ impl SoftwareVault {
                     ))?,
                 )
             }
+            #[cfg(feature = "bls")]
             SecretType::Bls => {
+                use core::convert::TryInto;
+
                 let bls_secret_key = BlsSecretKey::from_bytes(secret.try_into().unwrap()).unwrap();
                 let public_key =
                     PublicKey::new(BlsPublicKey::from(&bls_secret_key).to_bytes().into());
@@ -54,14 +58,20 @@ impl SoftwareVault {
         attributes: &SecretAttributes,
     ) -> ockam_core::Result<()> {
         match attributes.stype() {
+            #[cfg(feature = "bls")]
             SecretType::Bls => {
+                use core::convert::TryInto;
+
                 let bytes = TryInto::<[u8; BlsSecretKey::BYTES]>::try_into(secret)
                     .map_err(|_| VaultError::InvalidBlsSecretLength)?;
                 if BlsSecretKey::from_bytes(&bytes).is_none().into() {
                     return Err(VaultError::InvalidBlsSecret.into());
                 }
             }
-            SecretType::Buffer | SecretType::Aes | SecretType::Curve25519 => {}
+            SecretType::Buffer | SecretType::Aes | SecretType::Curve25519 => {
+                // Avoid unused variable warning
+                let _ = secret;
+            }
             SecretType::P256 => { /* FIXME */ }
         }
         Ok(())
@@ -105,6 +115,7 @@ impl SecretVault for SoftwareVault {
             SecretType::P256 => {
                 return Err(VaultError::InvalidKeyType.into());
             }
+            #[cfg(feature = "bls")]
             SecretType::Bls => {
                 let bls_secret_key = BlsSecretKey::random(&mut rng).unwrap();
 
@@ -120,7 +131,10 @@ impl SecretVault for SoftwareVault {
     }
 
     /// Generate fresh secret. Only Curve25519 and Buffer types are supported
-    async fn async_secret_generate(&mut self, attributes: SecretAttributes) -> ockam_core::Result<Secret> {
+    async fn async_secret_generate(
+        &mut self,
+        attributes: SecretAttributes,
+    ) -> ockam_core::Result<Secret> {
         self.secret_generate(attributes)
     }
 
@@ -173,7 +187,10 @@ impl SecretVault for SoftwareVault {
                 let pk = x25519_dalek::PublicKey::from(&sk);
                 Ok(PublicKey::new(pk.to_bytes().to_vec()))
             }
+            #[cfg(feature = "bls")]
             SecretType::Bls => {
+                use core::convert::TryInto;
+
                 let bls_secret_key =
                     BlsSecretKey::from_bytes(&entry.key().as_ref().try_into().unwrap()).unwrap();
                 Ok(PublicKey::new(
@@ -187,7 +204,10 @@ impl SecretVault for SoftwareVault {
     }
 
     /// Extract public key from secret. Only Curve25519 type is supported
-    async fn async_secret_public_key_get(&mut self, context: Secret) -> ockam_core::Result<PublicKey> {
+    async fn async_secret_public_key_get(
+        &mut self,
+        context: Secret,
+    ) -> ockam_core::Result<PublicKey> {
         self.secret_public_key_get(&context)
     }
 

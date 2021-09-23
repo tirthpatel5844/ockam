@@ -12,7 +12,11 @@ use ockam_core::compat::rand::random;
 #[cfg(feature = "std")]
 use rand::random;
 
-pub(crate) struct ProfileChannelListener<T: TrustPolicy, P: Identity + AsyncClone + Clone, V: XXVault + Sync> {
+pub(crate) struct ProfileChannelListener<
+    T: TrustPolicy,
+    P: Identity + AsyncClone + Clone,
+    V: XXVault + Sync,
+> {
     trust_policy: T,
     profile: P,
     vault: V,
@@ -20,7 +24,9 @@ pub(crate) struct ProfileChannelListener<T: TrustPolicy, P: Identity + AsyncClon
 }
 
 #[async_trait]
-impl<T: TrustPolicy + Sync, P: Identity + AsyncClone + Clone + Sync, V: XXVault + Sync> AsyncClone for ProfileChannelListener<T, P, V> {
+impl<T: TrustPolicy + Sync, P: Identity + AsyncClone + Clone + Sync, V: XXVault + Sync> AsyncClone
+    for ProfileChannelListener<T, P, V>
+{
     async fn async_clone(&self) -> Self {
         Self {
             trust_policy: self.trust_policy.async_clone().await,
@@ -31,7 +37,9 @@ impl<T: TrustPolicy + Sync, P: Identity + AsyncClone + Clone + Sync, V: XXVault 
     }
 }
 
-impl<T: TrustPolicy, P: Identity + AsyncClone + Clone, V: XXVault + Sync> ProfileChannelListener<T, P, V> {
+impl<T: TrustPolicy, P: Identity + AsyncClone + Clone, V: XXVault + Sync>
+    ProfileChannelListener<T, P, V>
+{
     pub fn new(trust_policy: T, profile: P, vault: V) -> Self {
         let listener_address: Address = random();
         ProfileChannelListener {
@@ -44,8 +52,11 @@ impl<T: TrustPolicy, P: Identity + AsyncClone + Clone, V: XXVault + Sync> Profil
 }
 
 #[ockam_core::worker]
-impl<T: TrustPolicy + Sync, P: Identity + AsyncClone + Clone + Sync, V: XXVault + AsyncClone + Sync> Worker
-    for ProfileChannelListener<T, P, V>
+impl<
+        T: TrustPolicy + Sync,
+        P: Identity + AsyncClone + Clone + Sync,
+        V: XXVault + AsyncClone + Sync,
+    > Worker for ProfileChannelListener<T, P, V>
 {
     type Message = CreateResponderChannelMessage;
     type Context = Context;

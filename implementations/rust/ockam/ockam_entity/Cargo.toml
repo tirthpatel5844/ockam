@@ -37,7 +37,8 @@ alloc = ["ockam_core/alloc","ockam_channel/alloc", "ockam_key_exchange_core/allo
 # cryptographically secure implementations.
 # WARNING: Under no circumstances should this ever be enabled in
 #          production builds!
-unsafe_random = ["ockam_core/unsafe_random", "signature_bbs_plus/unsafe_random"]
+unsafe_random = ["ockam_core/unsafe_random"] #, "signature_bbs_plus/unsafe_random"]
+credentials = [ "ockam_vault/bls", "ockam_vault_core/bls", "signature_core", "signature_bbs_plus", "signature_bls", "bls12_381_plus"]
 
 [dependencies]
 ockam_core = { path = "../ockam_core", version = "0.29.0-dev", default-features = false }
@@ -49,14 +50,14 @@ ockam_channel = {path = "../ockam_channel", version = "0.24.0-dev", default-feat
 ockam_key_exchange_xx = { path = "../ockam_key_exchange_xx", version = "0.21.0-dev"                             , default-features = false, optional = true}
 ockam_key_exchange_core = { path = "../ockam_key_exchange_core", version = "0.21.0-dev", default-features = false }
 async-trait = "0.1"
-bls12_381_plus = { version = "0.5", default-features = false }
 cfg-if = "1.0.0"
 group = { version = "0.10.0", default-features = false }
 heapless = "0.7"
 serde = { version = "1.0", default-features = false, features = ["derive"] }
-signature_core = { path = "../signature_core", version = "0.21.0-dev"   }
-signature_bls = { path = "../signature_bls", version = "0.19.0-dev"   }
-signature_bbs_plus = { path = "../signature_bbs_plus", version = "0.21.0-dev"   }
+bls12_381_plus = { version = "0.5", default-features = false, optional = true }
+signature_core = { path = "../signature_core", version = "0.21.0-dev", optional = true }
+signature_bls = { path = "../signature_bls", version = "0.19.0-dev", optional = true }
+signature_bbs_plus = { path = "../signature_bbs_plus", version = "0.21.0-dev", optional = true }
 serde_json = { version ="1.0", optional = true }
 sha2 = { version = "0.9", default-features = false }
 serde-big-array = "0.3"

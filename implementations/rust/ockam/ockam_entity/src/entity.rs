@@ -1,15 +1,9 @@
 use crate::EntityError::IdentityApiFailed;
 use crate::{
-    profile::Profile, traits::Verifier, AuthenticationProof, BbsCredential, Changes, Contact,
-    Credential, CredentialAttribute, CredentialFragment1, CredentialFragment2, CredentialOffer,
-    CredentialPresentation, CredentialProof, CredentialProtocol, CredentialPublicKey,
-    CredentialRequest, CredentialRequestFragment, CredentialSchema, EntityBuilder,
-    EntityCredential, Handle, Holder, HolderWorker, Identity, IdentityRequest, IdentityResponse,
-    Issuer, Lease, ListenerWorker, MaybeContact, OfferId, PresentationFinishedMessage,
-    PresentationManifest, PresenterWorker, ProfileChangeEvent, ProfileIdentifier, ProofRequestId,
-    SecureChannels, SigningPublicKey, TrustPolicy, TrustPolicyImpl, VerifierWorker, TTL,
+    profile::Profile, AuthenticationProof, Changes, Contact, EntityBuilder, Handle, Identity,
+    IdentityRequest, IdentityResponse, Lease, MaybeContact, ProfileChangeEvent, ProfileIdentifier,
+    SecureChannels, TrustPolicy, TrustPolicyImpl, TTL,
 };
-use core::convert::TryInto;
 use ockam_core::async_trait::async_trait;
 use ockam_core::compat::{
     boxed::Box,
@@ -20,13 +14,12 @@ use ockam_core::traits::AsyncClone;
 use ockam_core::{Address, Result, Route};
 use ockam_node::{block_future, Context};
 use ockam_vault::ockam_vault_core::{PublicKey, Secret};
-use signature_bls::SecretKey;
 use IdentityRequest::*;
 use IdentityResponse as Res;
 
 #[derive(Clone)]
 pub struct Entity {
-    handle: Handle,
+    pub(crate) handle: Handle,
     current_profile_id: Option<ProfileIdentifier>,
 }
 
@@ -96,7 +89,10 @@ impl Entity {
     }
 
     pub async fn async_create_profile(&mut self, vault_address: &Address) -> Result<Profile> {
-        if let Res::CreateProfile(id) = self.async_call(CreateProfile(vault_address.clone())).await? {
+        if let Res::CreateProfile(id) = self
+            .async_call(CreateProfile(vault_address.clone()))
+            .await?
+        {
             // Set current_profile_id, if it's first profile
             if self.current_profile_id.is_none() {
                 self.current_profile_id = Some(id.clone());
@@ -131,7 +127,7 @@ impl AsyncClone for Entity {
     async fn async_clone(&self) -> Entity {
         Entity {
             handle: self.handle.async_clone().await,
-            current_profile_id: self.current_profile_id.clone()
+            current_profile_id: self.current_profile_id.clone(),
         }
     }
 }
@@ -201,11 +197,17 @@ impl Identity for Entity {
         }
     }
 
-    async fn async_create_auth_proof<S: AsRef<[u8]> + Send + Sync>(&mut self, state_slice: S) -> Result<AuthenticationProof> {
-        if let Res::CreateAuthenticationProof(proof) = self.async_call(CreateAuthenticationProof(
-            self.id(),
-            state_slice.as_ref().to_vec(),
-        )).await? {
+    async fn async_create_auth_proof<S: AsRef<[u8]> + Send + Sync>(
+        &mut self,
+        state_slice: S,
+    ) -> Result<AuthenticationProof> {
+        if let Res::CreateAuthenticationProof(proof) = self
+            .async_call(CreateAuthenticationProof(
+                self.id(),
+                state_slice.as_ref().to_vec(),
+            ))
+            .await?
+        {
             Ok(proof)
         } else {
             err()
@@ -230,18 +232,21 @@ impl Identity for Entity {
         }
     }
 
-    async fn async_verify_auth_proof<S: AsRef<[u8]>  + Send + Sync, P: AsRef<[u8]> + Send + Sync>(
+    async fn async_verify_auth_proof<S: AsRef<[u8]> + Send + Sync, P: AsRef<[u8]> + Send + Sync>(
         &mut self,
         state_slice: S,
         peer_id: &ProfileIdentifier,
         proof_slice: P,
     ) -> Result<bool> {
-        if let Res::VerifyAuthenticationProof(verified) = self.async_call(VerifyAuthenticationProof(
-            self.id(),
-            state_slice.as_ref().to_vec(),
-            peer_id.clone(),
-            proof_slice.as_ref().to_vec(),
-        )).await? {
+        if let Res::VerifyAuthenticationProof(verified) = self
+            .async_call(VerifyAuthenticationProof(
+                self.id(),
+                state_slice.as_ref().to_vec(),
+                peer_id.clone(),
+                proof_slice.as_ref().to_vec(),
+            ))
+            .await?
+        {
             Ok(verified)
         } else {
             err()
@@ -291,7 +296,10 @@ impl Identity for Entity {
     }
 
     async fn async_as_contact(&mut self) -> Result<Contact> {
-        let mut profile = self.async_current_profile().await.expect("no current profile");
+        let mut profile = self
+            .async_current_profile()
+            .await
+            .expect("no current profile");
         let contact = profile.as_contact()?;
         Ok(contact)
     }
@@ -307,8 +315,14 @@ impl Identity for Entity {
         }
     }
 
-    async fn async_get_contact(&mut self, contact_id: &ProfileIdentifier) -> Result<Option<Contact>> {
-        if let Res::GetContact(contact) = self.async_call(GetContact(self.id(), contact_id.clone())).await? {
+    async fn async_get_contact(
+        &mut self,
+        contact_id: &ProfileIdentifier,
+    ) -> Result<Option<Contact>> {
+        if let Res::GetContact(contact) = self
+            .async_call(GetContact(self.id(), contact_id.clone()))
+            .await?
+        {
             match contact {
                 MaybeContact::None => Ok(None),
                 MaybeContact::Contact(contact) => Ok(Some(contact)),
@@ -327,7 +341,10 @@ impl Identity for Entity {
     }
 
     async fn async_verify_contact<C: Into<Contact> + Send>(&mut self, contact: C) -> Result<bool> {
-        if let Res::VerifyContact(contact) = self.async_call(VerifyContact(self.id(), contact.into())).await? {
+        if let Res::VerifyContact(contact) = self
+            .async_call(VerifyContact(self.id(), contact.into()))
+            .await?
+        {
             Ok(contact)
         } else {
             err()
@@ -344,9 +361,13 @@ impl Identity for Entity {
         }
     }
 
-    async fn async_verify_and_add_contact<C: Into<Contact> + Send>(&mut self, contact: C) -> Result<bool> {
-        if let Res::VerifyAndAddContact(verified_and_added) =
-            self.async_call(VerifyAndAddContact(self.id(), contact.into())).await?
+    async fn async_verify_and_add_contact<C: Into<Contact> + Send>(
+        &mut self,
+        contact: C,
+    ) -> Result<bool> {
+        if let Res::VerifyAndAddContact(verified_and_added) = self
+            .async_call(VerifyAndAddContact(self.id(), contact.into()))
+            .await?
         {
             Ok(verified_and_added)
         } else {
@@ -443,16 +464,25 @@ impl SecureChannels for Entity {
         trust_policy: impl TrustPolicy,
     ) -> Result<()>
     where
-        A: Into<Address> + Send
+        A: Into<Address> + Send,
     {
-        let profile = self.async_current_profile().await.expect("no current profile");
+        let profile = self
+            .async_current_profile()
+            .await
+            .expect("no current profile");
         let ctx = &self.async_handle().await.ctx;
         let trust_policy_address = TrustPolicyImpl::create_worker(ctx, trust_policy).await?;
-        if let Res::CreateSecureChannelListener = self.async_call(CreateSecureChannelListener(
-            profile.async_identifier().await.expect("couldn't get profile id"),
-            address.into(),
-            trust_policy_address,
-        )).await? {
+        if let Res::CreateSecureChannelListener = self
+            .async_call(CreateSecureChannelListener(
+                profile
+                    .async_identifier()
+                    .await
+                    .expect("couldn't get profile id"),
+                address.into(),
+                trust_policy_address,
+            ))
+            .await?
+        {
             Ok(())
         } else {
             err()
@@ -465,372 +495,28 @@ impl SecureChannels for Entity {
         trust_policy: impl TrustPolicy,
     ) -> Result<Address>
     where
-        R: Into<Route> + Send
+        R: Into<Route> + Send,
     {
-        let profile = self.async_current_profile().await.expect("no current profile");
+        let profile = self
+            .async_current_profile()
+            .await
+            .expect("no current profile");
         let ctx = &self.async_handle().await.ctx;
         let trust_policy_address = TrustPolicyImpl::create_worker(ctx, trust_policy).await?;
-        if let Res::CreateSecureChannel(address) = self.async_call(CreateSecureChannel(
-            profile.async_identifier().await.expect("couldn't get profile id"),
-            route.into(),
-            trust_policy_address,
-        )).await? {
+        if let Res::CreateSecureChannel(address) = self
+            .async_call(CreateSecureChannel(
+                profile
+                    .async_identifier()
+                    .await
+                    .expect("couldn't get profile id"),
+                route.into(),
+                trust_policy_address,
+            ))
+            .await?
+        {
             Ok(address)
         } else {
             err()
         }
-    }
-}
-
-impl Issuer for Entity {
-    fn get_signing_key(&mut self) -> Result<SecretKey> {
-        let profile = self.clone().current_profile().expect("no current profile");
-        if let Res::GetSigningKey(signing_key) = profile.call(GetSigningKey(
-            profile.identifier().expect("couldn't get profile id"),
-        ))? {
-            Ok(signing_key)
-        } else {
-            err()
-        }
-    }
-
-    fn get_signing_public_key(&mut self) -> Result<SigningPublicKey> {
-        // FIXME: Why clone?
-        let profile = self.clone().current_profile().expect("no current profile");
-        if let Res::GetIssuerPublicKey(issuer_public_key) = profile.call(GetIssuerPublicKey(
-            profile.identifier().expect("couldn't get profile id"),
-        ))? {
-            Ok(issuer_public_key.0)
-        } else {
-            err()
-        }
-    }
-
-    fn create_offer(&self, schema: &CredentialSchema) -> Result<CredentialOffer> {
-        let profile = self.clone().current_profile().expect("no current profile");
-        if let Res::CreateOffer(offer) = profile.call(CreateOffer(
-            profile.identifier().expect("couldn't get profile id"),
-            schema.clone(),
-        ))? {
-            Ok(offer)
-        } else {
-            err()
-        }
-    }
-
-    fn create_proof_of_possession(&self) -> Result<CredentialProof> {
-        let profile = self.clone().current_profile().expect("no current profile");
-        if let Res::CreateProofOfPossession(proof) = profile.call(CreateProofOfPossession(
-            profile.identifier().expect("couldn't get profile id"),
-        ))? {
-            Ok(proof)
-        } else {
-            err()
-        }
-    }
-
-    fn sign_credential<A: AsRef<[CredentialAttribute]>>(
-        &self,
-        schema: &CredentialSchema,
-        attributes: A,
-    ) -> Result<BbsCredential> {
-        let profile = self.clone().current_profile().expect("no current profile");
-        if let Res::SignCredential(credential) = profile.call(SignCredential(
-            profile.identifier().expect("couldn't get profile id"),
-            schema.clone(),
-            attributes.as_ref().to_vec(),
-        ))? {
-            Ok(credential)
-        } else {
-            err()
-        }
-    }
-
-    fn sign_credential_request<A: AsRef<[(String, CredentialAttribute)]>>(
-        &self,
-        request: &CredentialRequest,
-        schema: &CredentialSchema,
-        attributes: A,
-        offer_id: OfferId,
-    ) -> Result<CredentialFragment2> {
-        let profile = self.clone().current_profile().expect("no current profile");
-        if let Res::SignCredentialRequest(frag) = profile.call(SignCredentialRequest(
-            profile.identifier().expect("couldn't get profile id"),
-            request.clone(),
-            schema.clone(),
-            attributes.as_ref().to_vec(),
-            offer_id,
-        ))? {
-            Ok(frag)
-        } else {
-            err()
-        }
-    }
-}
-
-impl Holder for Entity {
-    fn accept_credential_offer(
-        &self,
-        offer: &CredentialOffer,
-        issuer_public_key: SigningPublicKey,
-    ) -> Result<CredentialRequestFragment> {
-        let profile = self.clone().current_profile().expect("no current profile");
-        if let Res::AcceptCredentialOffer(request_fragment) =
-            profile.call(AcceptCredentialOffer(
-                profile.identifier().expect("couldn't get profile id"),
-                offer.clone(),
-                CredentialPublicKey(issuer_public_key),
-            ))?
-        {
-            Ok(request_fragment)
-        } else {
-            err()
-        }
-    }
-
-    fn combine_credential_fragments(
-        &self,
-        credential_fragment1: CredentialFragment1,
-        credential_fragment2: CredentialFragment2,
-    ) -> Result<BbsCredential> {
-        let profile = self.clone().current_profile().expect("no current profile");
-        if let Res::CombineCredentialFragments(credential) =
-            profile.call(CombineCredentialFragments(
-                profile.identifier().expect("couldn't get profile id"),
-                credential_fragment1,
-                credential_fragment2,
-            ))?
-        {
-            Ok(credential)
-        } else {
-            err()
-        }
-    }
-
-    fn is_valid_credential(
-        &self,
-        credential: &BbsCredential,
-        verifier_key: SigningPublicKey,
-    ) -> Result<bool> {
-        let profile = self.clone().current_profile().expect("no current profile");
-        if let Res::IsValidCredential(valid) = profile.call(IsValidCredential(
-            profile.identifier().expect("couldn't get profile id"),
-            credential.clone(),
-            CredentialPublicKey(verifier_key),
-        ))? {
-            Ok(valid)
-        } else {
-            err()
-        }
-    }
-
-    fn create_credential_presentation(
-        &self,
-        credential: &BbsCredential,
-        presentation_manifests: &PresentationManifest,
-        proof_request_id: ProofRequestId,
-    ) -> Result<CredentialPresentation> {
-        let profile = self.clone().current_profile().expect("no current profile");
-        if let Res::PresentCredential(presentation) = profile.call(PresentCredential(
-            profile.identifier().expect("couldn't get profile id"),
-            credential.clone(),
-            presentation_manifests.clone(),
-            proof_request_id,
-        ))? {
-            Ok(presentation)
-        } else {
-            err()
-        }
-    }
-
-    fn add_credential(&mut self, credential: EntityCredential) -> Result<()> {
-        let profile = self.clone().current_profile().expect("no current profile");
-        if let Res::AddCredential = profile.call(AddCredential(
-            profile.identifier().expect("couldn't get profile id"),
-            credential,
-        ))? {
-            Ok(())
-        } else {
-            err()
-        }
-    }
-
-    fn get_credential(&mut self, credential: &Credential) -> Result<EntityCredential> {
-        let profile = self.clone().current_profile().expect("no current profile");
-        if let Res::GetCredential(c) = profile.call(GetCredential(
-            profile.identifier().expect("couldn't get profile id"),
-            credential.clone(),
-        ))? {
-            Ok(c)
-        } else {
-            err()
-        }
-    }
-}
-
-impl Verifier for Entity {
-    fn create_proof_request_id(&self) -> Result<ProofRequestId> {
-        let profile = self.clone().current_profile().expect("no current profile");
-        if let Res::CreateProofRequestId(request_id) = profile.call(CreateProofRequestId(
-            profile.identifier().expect("couldn't get profile id"),
-        ))? {
-            Ok(request_id)
-        } else {
-            err()
-        }
-    }
-
-    fn verify_proof_of_possession(
-        &self,
-        signing_public_key: CredentialPublicKey,
-        proof: CredentialProof,
-    ) -> Result<bool> {
-        let profile = self.clone().current_profile().expect("no current profile");
-
-        if let Res::VerifyProofOfPossession(verified) = profile.call(VerifyProofOfPossession(
-            profile.identifier().expect("couldn't get profile id"),
-            signing_public_key,
-            proof,
-        ))? {
-            Ok(verified)
-        } else {
-            err()
-        }
-    }
-
-    fn verify_credential_presentation(
-        &self,
-        presentation: &CredentialPresentation,
-        presentation_manifest: &PresentationManifest,
-        proof_request_id: ProofRequestId,
-    ) -> Result<bool> {
-        let profile = self.clone().current_profile().expect("no current profile");
-        if let Res::VerifyCredentialPresentation(verified) =
-            profile.call(VerifyCredentialPresentation(
-                profile.identifier().expect("couldn't get profile id"),
-                presentation.clone(),
-                presentation_manifest.clone(),
-                proof_request_id,
-            ))?
-        {
-            Ok(verified)
-        } else {
-            err()
-        }
-    }
-}
-
-impl CredentialProtocol for Entity {
-    fn create_credential_issuance_listener(
-        &mut self,
-        address: impl Into<Address> + Send,
-        schema: CredentialSchema,
-        trust_policy: impl TrustPolicy,
-    ) -> Result<()> {
-        let profile = self.clone().current_profile().expect("no current profile");
-        block_future(&self.handle.ctx.runtime(), async move {
-            let trust_policy =
-                TrustPolicyImpl::create_using_impl(&self.handle.ctx, trust_policy).await?;
-
-            let address = address.into();
-            let worker = ListenerWorker::new(profile, schema, trust_policy);
-            self.handle.ctx.start_worker(address, worker).await?;
-
-            Ok(())
-        })
-    }
-
-    fn acquire_credential(
-        &mut self,
-        issuer_route: Route,
-        issuer_id: &ProfileIdentifier,
-        schema: CredentialSchema,
-        values: Vec<CredentialAttribute>,
-    ) -> Result<Credential> {
-        let profile = self.clone().current_profile().expect("no current profile");
-        block_future(&self.handle.ctx.runtime(), async move {
-            let mut ctx = self.handle.ctx.new_context(Address::random(0)).await?;
-
-            let worker = HolderWorker::new(
-                profile.clone(),
-                issuer_id.clone(),
-                issuer_route,
-                schema,
-                values,
-                ctx.address(),
-            );
-            ctx.start_worker(Address::random(0), worker).await?;
-
-            let credential = ctx
-                .receive_timeout::<Credential>(120 /* FIXME */)
-                .await?
-                .take()
-                .body();
-
-            Ok(credential)
-        })
-    }
-
-    fn present_credential(
-        &mut self,
-        verifier_route: Route,
-        credential: Credential,
-        reveal_attributes: Vec<String>,
-    ) -> Result<()> {
-        let profile = self.clone().current_profile().expect("no current profile");
-        block_future(&self.handle.ctx.runtime(), async move {
-            let credential = self.get_credential(&credential)?;
-
-            let mut ctx = self.handle.ctx.new_context(Address::random(0)).await?;
-            let worker = PresenterWorker::new(
-                profile.clone(),
-                verifier_route,
-                credential,
-                reveal_attributes,
-                ctx.address(),
-            );
-            ctx.start_worker(Address::random(0), worker).await?;
-
-            let _ = ctx
-                .receive_timeout::<PresentationFinishedMessage>(120 /* FIXME */)
-                .await?
-                .take()
-                .body();
-
-            Ok(())
-        })
-    }
-
-    fn verify_credential(
-        &mut self,
-        address: impl Into<Address> + Send,
-        issuer_id: &ProfileIdentifier,
-        schema: CredentialSchema,
-        attributes_values: Vec<CredentialAttribute>,
-    ) -> Result<bool> {
-        let mut profile = self.clone().current_profile().expect("no current profile");
-        block_future(&self.handle.ctx.runtime(), async move {
-            let issuer = profile.get_contact(issuer_id)?.unwrap();
-            let pubkey = issuer.get_signing_public_key()?;
-
-            let mut ctx = self.handle.ctx.new_context(Address::random(0)).await?;
-            let worker = VerifierWorker::new(
-                profile.clone(),
-                pubkey.as_ref().try_into().unwrap(), // FIXME
-                schema,
-                attributes_values,
-                ctx.address(),
-            );
-
-            ctx.start_worker(address.into(), worker).await?;
-
-            let res = ctx
-                .receive_timeout::<bool>(120 /* FIXME */)
-                .await?
-                .take()
-                .body();
-
-            Ok(res)
-        })
     }
 }

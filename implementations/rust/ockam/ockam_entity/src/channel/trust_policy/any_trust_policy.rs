@@ -17,11 +17,13 @@ impl<F: TrustPolicy, S: TrustPolicy> AnyTrustPolicy<F, S> {
 }
 
 #[async_trait]
-impl<F: TrustPolicy + Sync, S: TrustPolicy + Sync> ockam_core::traits::AsyncClone for AnyTrustPolicy<F, S> {
+impl<F: TrustPolicy + Sync, S: TrustPolicy + Sync> ockam_core::traits::AsyncClone
+    for AnyTrustPolicy<F, S>
+{
     async fn async_clone(&self) -> AnyTrustPolicy<F, S> {
         AnyTrustPolicy {
             first: self.first.async_clone().await,
-            second: self.second.async_clone().await
+            second: self.second.async_clone().await,
         }
     }
 }
@@ -32,7 +34,10 @@ impl<F: TrustPolicy + Sync, S: TrustPolicy + Sync> TrustPolicy for AnyTrustPolic
         Ok(self.first.check(trust_info)? || self.second.check(trust_info)?)
     }
     async fn async_check(&self, trust_info: &SecureChannelTrustInfo) -> Result<bool> {
-        Ok(self.first.async_check(trust_info).await? || self.second.async_check(trust_info).await?)
+        Ok(
+            self.first.async_check(trust_info).await?
+                || self.second.async_check(trust_info).await?,
+        )
     }
 }
 

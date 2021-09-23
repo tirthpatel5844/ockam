@@ -15,7 +15,11 @@ pub trait SecretVault: Zeroize {
     /// Import a secret with given attributes from binary form into the vault
     fn secret_import(&mut self, secret: &[u8], attributes: SecretAttributes) -> Result<Secret>;
     /// Import a secret with given attributes from binary form into the vault
-    async fn async_secret_import(&mut self, secret: &[u8], attributes: SecretAttributes) -> Result<Secret>;
+    async fn async_secret_import(
+        &mut self,
+        secret: &[u8],
+        attributes: SecretAttributes,
+    ) -> Result<Secret>;
     /// Export a secret key to the binary form represented as [`SecretKey`]
     fn secret_export(&mut self, context: &Secret) -> Result<SecretKey>;
     /// Get the attributes for a secret

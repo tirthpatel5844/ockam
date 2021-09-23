@@ -18,7 +18,7 @@ impl TrustIdentifierPolicy {
 impl ockam_core::traits::AsyncClone for TrustIdentifierPolicy {
     async fn async_clone(&self) -> TrustIdentifierPolicy {
         TrustIdentifierPolicy {
-            their_profile_id: self.their_profile_id.clone()
+            their_profile_id: self.their_profile_id.clone(),
         }
     }
 }

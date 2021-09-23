@@ -99,7 +99,9 @@ impl<I: Identity, T: TrustPolicy + Sync> SecureChannelWorker<I, T> {
         let self_local_address: Address = random();
         let self_remote_address: Address = random();
 
-        let initiator = XXNewKeyExchanger::new(vault.async_clone().await).async_initiator().await?;
+        let initiator = XXNewKeyExchanger::new(vault.async_clone().await)
+            .async_initiator()
+            .await?;
         // Create regular secure channel and set self address as first responder
         let temp_ctx = ctx.new_context(Address::random(0)).await?;
         let self_remote_address_clone = self_remote_address.clone();
@@ -219,7 +221,10 @@ impl<I: Identity, T: TrustPolicy + Sync> SecureChannelWorker<I, T> {
         let kex_msg = KeyExchangeCompleted::decode(&msg.payload())?;
 
         // Prove we posses Profile key
-        let proof = state.identity.async_create_auth_proof(&kex_msg.auth_hash()).await?;
+        let proof = state
+            .identity
+            .async_create_auth_proof(&kex_msg.auth_hash())
+            .await?;
         let msg = EntityChannelMessage::Request {
             contact: state.identity.async_as_contact().await?,
             proof,
@@ -270,15 +275,17 @@ impl<I: Identity, T: TrustPolicy + Sync> SecureChannelWorker<I, T> {
             if let Some(_) = contact_result? {
                 // TODO: We're creating SecureChannel with known Profile. Need to update their Profile.
             } else {
-                state.identity.async_verify_and_add_contact(their_contact).await?;
+                state
+                    .identity
+                    .async_verify_and_add_contact(their_contact)
+                    .await?;
             }
 
             // Verify responder posses their Profile key
-            let verified = state.identity.async_verify_auth_proof(
-                &state.channel.auth_hash(),
-                &their_profile_id,
-                proof,
-            ).await?;
+            let verified = state
+                .identity
+                .async_verify_auth_proof(&state.channel.auth_hash(), &their_profile_id, proof)
+                .await?;
 
             if !verified {
                 return Err(EntityError::SecureChannelVerificationFailed.into());
@@ -303,7 +310,8 @@ impl<I: Identity, T: TrustPolicy + Sync> SecureChannelWorker<I, T> {
             let contact = state.identity.async_as_contact().await?;
             let proof = state
                 .identity
-                .async_create_auth_proof(&state.channel.auth_hash()).await?;
+                .async_create_auth_proof(&state.channel.auth_hash())
+                .await?;
 
             let auth_msg = EntityChannelMessage::Response { contact, proof };
 
@@ -366,14 +374,15 @@ impl<I: Identity, T: TrustPolicy + Sync> SecureChannelWorker<I, T> {
             } else {
                 state
                     .identity
-                    .async_verify_and_add_contact(their_contact.clone()).await?;
+                    .async_verify_and_add_contact(their_contact.clone())
+                    .await?;
             }
 
             // Verify initiator posses their Profile key
-            let verified =
-                state
-                    .identity
-                    .async_verify_auth_proof(state.auth_hash, &their_profile_id, proof).await?;
+            let verified = state
+                .identity
+                .async_verify_auth_proof(state.auth_hash, &their_profile_id, proof)
+                .await?;
 
             if !verified {
                 return Err(EntityError::SecureChannelVerificationFailed.into());

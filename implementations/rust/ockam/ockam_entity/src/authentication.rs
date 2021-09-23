@@ -69,7 +69,9 @@ impl Authentication {
         let proof: AuthenticationProof =
             serde_bare::from_slice(proof).map_err(|_| EntityError::BareError)?;
 
-        vault.async_verify(proof.signature(), responder_public_key, channel_state).await
+        vault
+            .async_verify(proof.signature(), responder_public_key, channel_state)
+            .await
     }
 }
 

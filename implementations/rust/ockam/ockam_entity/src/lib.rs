@@ -19,10 +19,11 @@ extern crate core;
 #[macro_use]
 extern crate alloc;
 
+use cfg_if::cfg_if;
+
 pub use change::*;
 pub use channel::*;
 pub use contact::*;
-pub use credential::*;
 pub use entity::*;
 pub use entity_builder::*;
 pub use error::*;
@@ -30,13 +31,8 @@ pub use identifiers::*;
 pub use key_attributes::*;
 pub use lease::*;
 use ockam_channel::SecureChannelVault;
-use ockam_core::compat::{
-    boxed::Box,
-    collections::HashMap,
-    string::String,
-    vec::Vec
-};
 use ockam_core::async_trait::async_trait;
+use ockam_core::compat::{boxed::Box, collections::HashMap, string::String, vec::Vec};
 use ockam_core::traits::AsyncClone;
 use ockam_core::{Address, Message, Result};
 use ockam_node::{block_future, Context};
@@ -55,9 +51,7 @@ pub struct Handle {
 
 impl Clone for Handle {
     fn clone(&self) -> Self {
-        block_future(&self.ctx.runtime(), async move {
-            self.async_clone().await
-        })
+        block_future(&self.ctx.runtime(), async move { self.async_clone().await })
     }
 }
 
@@ -121,7 +115,6 @@ mod change;
 pub mod change_history;
 mod channel;
 mod contact;
-mod credential;
 mod entity;
 mod entity_builder;
 mod error;
@@ -133,6 +126,13 @@ mod profile_state;
 mod proof;
 mod traits;
 mod worker;
+
+cfg_if! {
+    if #[cfg(feature = "credentials")] {
+        mod credential;
+        pub use credential::*;
+    }
+}
 
 /// Traits required for a Vault implementation suitable for use in a Profile
 pub trait ProfileVault:
@@ -158,7 +158,9 @@ pub type ProfileEventAttributes = HashMap<String, String>;
 /// Contacts Database
 pub type Contacts = HashMap<ProfileIdentifier, Contact>;
 
+#[cfg(feature = "credentials")]
 pub use signature_bbs_plus::{PublicKey as BbsPublicKey, SecretKey as BbsSecretKey};
+#[cfg(feature = "credentials")]
 pub use signature_bls::{PublicKey as BlsPublicKey, SecretKey as BlsSecretKey};
 
 pub struct ProfileSerializationUtil;

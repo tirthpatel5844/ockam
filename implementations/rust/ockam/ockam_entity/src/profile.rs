@@ -18,24 +18,19 @@
 /// TODO
 ///
 use crate::{
-    traits::Verifier, AuthenticationProof, BbsCredential, Changes, Contact, Credential,
-    CredentialAttribute, CredentialFragment1, CredentialFragment2, CredentialOffer,
-    CredentialPresentation, CredentialProof, CredentialPublicKey, CredentialRequest,
-    CredentialRequestFragment, CredentialSchema, Entity, EntityCredential, Handle, Holder,
-    Identity, IdentityRequest, IdentityResponse, Issuer, Lease, OfferId, PresentationManifest,
-    ProfileChangeEvent, ProfileIdentifier, ProofRequestId, SecureChannels, SigningPublicKey,
-    TrustPolicy, TTL,
+    AuthenticationProof, Changes, Contact, Entity, Handle, Identity, IdentityRequest,
+    IdentityResponse, Lease, ProfileChangeEvent, ProfileIdentifier, SecureChannels, TrustPolicy,
+    TTL,
 };
 use ockam_core::async_trait::async_trait;
 use ockam_core::compat::{
     boxed::Box,
     string::{String, ToString},
-    vec::Vec
+    vec::Vec,
 };
 use ockam_core::traits::AsyncClone;
 use ockam_core::{Address, Result, Route};
 use ockam_vault::{PublicKey, Secret};
-use signature_bls::SecretKey;
 
 #[derive(Clone)]
 pub struct Profile {
@@ -54,7 +49,7 @@ impl AsyncClone for Profile {
     async fn async_clone(&self) -> Profile {
         Profile {
             id: self.id.clone(),
-            handle: self.handle.async_clone().await
+            handle: self.handle.async_clone().await,
         }
     }
 }
@@ -89,6 +84,7 @@ impl Profile {
     /// Label for [`Profile`] update key
     pub const PROFILE_UPDATE: &'static str = "OCKAM_PUK";
     /// Label for key used to issue credentials
+    #[cfg(feature = "credentials")]
     pub const CREDENTIALS_ISSUE: &'static str = "OCKAM_CIK";
     /// Current version of change structure
     pub const CURRENT_CHANGE_VERSION: u8 = 1;
@@ -136,8 +132,14 @@ impl Identity for Profile {
         self.entity().create_auth_proof(state_slice)
     }
 
-    async fn async_create_auth_proof<S: AsRef<[u8]> + Send + Sync>(&mut self, state_slice: S) -> Result<AuthenticationProof> {
-        self.async_entity().await.async_create_auth_proof(state_slice).await
+    async fn async_create_auth_proof<S: AsRef<[u8]> + Send + Sync>(
+        &mut self,
+        state_slice: S,
+    ) -> Result<AuthenticationProof> {
+        self.async_entity()
+            .await
+            .async_create_auth_proof(state_slice)
+            .await
     }
 
     fn verify_auth_proof<S: AsRef<[u8]>, P: AsRef<[u8]>>(
@@ -150,14 +152,16 @@ impl Identity for Profile {
             .verify_auth_proof(state_slice, peer_id, proof_slice)
     }
 
-    async fn async_verify_auth_proof<S: AsRef<[u8]>  + Send + Sync, P: AsRef<[u8]> + Send + Sync>(
+    async fn async_verify_auth_proof<S: AsRef<[u8]> + Send + Sync, P: AsRef<[u8]> + Send + Sync>(
         &mut self,
         state_slice: S,
         peer_id: &ProfileIdentifier,
         proof_slice: P,
     ) -> Result<bool> {
-        self.async_entity().await
-            .async_verify_auth_proof(state_slice, peer_id, proof_slice).await
+        self.async_entity()
+            .await
+            .async_verify_auth_proof(state_slice, peer_id, proof_slice)
+            .await
     }
 
     fn add_change(&mut self, change_event: ProfileChangeEvent) -> Result<()> {
@@ -194,8 +198,14 @@ impl Identity for Profile {
         self.entity().get_contact(contact_id)
     }
 
-    async fn async_get_contact(&mut self, contact_id: &ProfileIdentifier) -> Result<Option<Contact>> {
-        self.async_entity().await.async_get_contact(contact_id).await
+    async fn async_get_contact(
+        &mut self,
+        contact_id: &ProfileIdentifier,
+    ) -> Result<Option<Contact>> {
+        self.async_entity()
+            .await
+            .async_get_contact(contact_id)
+            .await
     }
 
     fn verify_contact<C: Into<Contact>>(&mut self, contact: C) -> Result<bool> {
@@ -203,15 +213,24 @@ impl Identity for Profile {
     }
 
     async fn async_verify_contact<C: Into<Contact> + Send>(&mut self, contact: C) -> Result<bool> {
-        self.async_entity().await.async_verify_contact(contact).await
+        self.async_entity()
+            .await
+            .async_verify_contact(contact)
+            .await
     }
 
     fn verify_and_add_contact<C: Into<Contact>>(&mut self, contact: C) -> Result<bool> {
         self.entity().verify_and_add_contact(contact)
     }
 
-    async fn async_verify_and_add_contact<C: Into<Contact> + Send>(&mut self, contact: C) -> Result<bool> {
-        self.async_entity().await.async_verify_and_add_contact(contact).await
+    async fn async_verify_and_add_contact<C: Into<Contact> + Send>(
+        &mut self,
+        contact: C,
+    ) -> Result<bool> {
+        self.async_entity()
+            .await
+            .async_verify_and_add_contact(contact)
+            .await
     }
 
     fn verify_and_update_contact<C: AsRef<[ProfileChangeEvent]>>(
@@ -264,10 +283,11 @@ impl SecureChannels for Profile {
         trust_policy: impl TrustPolicy,
     ) -> Result<()>
     where
-        A: Into<Address> + Send
+        A: Into<Address> + Send,
     {
         self.entity()
-            .async_create_secure_channel_listener(address, trust_policy).await
+            .async_create_secure_channel_listener(address, trust_policy)
+            .await
     }
 
     async fn async_create_secure_channel<R>(
@@ -276,122 +296,10 @@ impl SecureChannels for Profile {
         trust_policy: impl TrustPolicy,
     ) -> Result<Address>
     where
-        R: Into<Route> + Send
+        R: Into<Route> + Send,
     {
-        self.entity().async_create_secure_channel(route, trust_policy).await
-    }
-}
-
-impl Issuer for Profile {
-    fn get_signing_key(&mut self) -> Result<SecretKey> {
-        self.entity().get_signing_key()
-    }
-
-    fn get_signing_public_key(&mut self) -> Result<SigningPublicKey> {
-        self.entity().get_signing_public_key()
-    }
-
-    fn create_offer(&self, schema: &CredentialSchema) -> Result<CredentialOffer> {
-        self.entity().create_offer(schema)
-    }
-
-    fn create_proof_of_possession(&self) -> Result<CredentialProof> {
-        self.entity().create_proof_of_possession()
-    }
-
-    fn sign_credential<A: AsRef<[CredentialAttribute]>>(
-        &self,
-        schema: &CredentialSchema,
-        attributes: A,
-    ) -> Result<BbsCredential> {
-        self.entity().sign_credential(schema, attributes)
-    }
-
-    fn sign_credential_request<A: AsRef<[(String, CredentialAttribute)]>>(
-        &self,
-        request: &CredentialRequest,
-        schema: &CredentialSchema,
-        attributes: A,
-        offer_id: OfferId,
-    ) -> Result<CredentialFragment2> {
         self.entity()
-            .sign_credential_request(request, schema, attributes, offer_id)
-    }
-}
-
-impl Holder for Profile {
-    fn accept_credential_offer(
-        &self,
-        offer: &CredentialOffer,
-        issuer_public_key: SigningPublicKey,
-    ) -> Result<CredentialRequestFragment> {
-        self.entity()
-            .accept_credential_offer(offer, issuer_public_key)
-    }
-
-    fn combine_credential_fragments(
-        &self,
-        credential_fragment1: CredentialFragment1,
-        credential_fragment2: CredentialFragment2,
-    ) -> Result<BbsCredential> {
-        self.entity()
-            .combine_credential_fragments(credential_fragment1, credential_fragment2)
-    }
-
-    fn is_valid_credential(
-        &self,
-        credential: &BbsCredential,
-        verifier_key: SigningPublicKey,
-    ) -> Result<bool> {
-        self.entity().is_valid_credential(credential, verifier_key)
-    }
-
-    fn create_credential_presentation(
-        &self,
-        credential: &BbsCredential,
-        presentation_manifests: &PresentationManifest,
-        proof_request_id: ProofRequestId,
-    ) -> Result<CredentialPresentation> {
-        self.entity().create_credential_presentation(
-            credential,
-            presentation_manifests,
-            proof_request_id,
-        )
-    }
-
-    fn add_credential(&mut self, credential: EntityCredential) -> Result<()> {
-        self.entity().add_credential(credential)
-    }
-
-    fn get_credential(&mut self, credential: &Credential) -> Result<EntityCredential> {
-        self.entity().get_credential(credential)
-    }
-}
-
-impl Verifier for Profile {
-    fn create_proof_request_id(&self) -> Result<ProofRequestId> {
-        self.entity().create_proof_request_id()
-    }
-
-    fn verify_proof_of_possession(
-        &self,
-        signing_public_key: CredentialPublicKey,
-        proof: CredentialProof,
-    ) -> Result<bool> {
-        self.entity()
-            .verify_proof_of_possession(signing_public_key, proof)
-    }
-
-    fn verify_credential_presentation(
-        &self,
-        presentation: &CredentialPresentation,
-        presentation_manifest: &PresentationManifest,
-        proof_request_id: ProofRequestId,
-    ) -> Result<bool> {
-        self.entity().verify_credential_presentation(
-            presentation,
-            presentation_manifest,
-            proof_request_id,
-        )
+            .async_create_secure_channel(route, trust_policy)
+            .await
     }
 }

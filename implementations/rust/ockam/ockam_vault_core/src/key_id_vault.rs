@@ -15,5 +15,8 @@ pub trait KeyIdVault: Zeroize {
     /// Return KeyId for given public key
     fn compute_key_id_for_public_key(&mut self, public_key: &PublicKey) -> Result<KeyId>;
     /// Return KeyId for given public key
-    async fn async_compute_key_id_for_public_key(&mut self, public_key: &PublicKey) -> Result<KeyId>;
+    async fn async_compute_key_id_for_public_key(
+        &mut self,
+        public_key: &PublicKey,
+    ) -> Result<KeyId>;
 }

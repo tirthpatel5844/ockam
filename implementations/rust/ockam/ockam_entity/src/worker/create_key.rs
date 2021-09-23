@@ -6,6 +6,7 @@ use crate::{
     ProfileChangeProof, ProfileChangeType, ProfileEventAttributes, ProfileState, Signature,
     SignatureType,
 };
+use cfg_if::cfg_if;
 use ockam_core::compat::vec::Vec;
 use ockam_vault::ockam_vault_core::{Hasher, SecretVault, Signer};
 use ockam_vault_core::Signature as OckamVaultSignature;
@@ -81,20 +82,34 @@ impl ProfileState {
         vault: &mut VaultSync,
     ) -> ockam_core::Result<ProfileChangeEvent> {
         // FIXME
-        let is_bls = key_attributes.label() == Profile::CREDENTIALS_ISSUE;
+        cfg_if! {
+            if #[cfg(feature = "credentials")] {
+                let is_bls = key_attributes.label() == Profile::CREDENTIALS_ISSUE;
 
-        let secret_attributes = if is_bls {
-            SecretAttributes::new(SecretType::Bls, SecretPersistence::Persistent, 32)
-        } else {
-            SecretAttributes::new(
-                SecretType::Curve25519,
-                SecretPersistence::Persistent,
-                CURVE25519_SECRET_LENGTH,
-            )
+                let secret_attributes = if is_bls {
+                    SecretAttributes::new(SecretType::Bls, SecretPersistence::Persistent, 32)
+                }
+                else {
+                    SecretAttributes::new(
+                        SecretType::Curve25519,
+                        SecretPersistence::Persistent,
+                        CURVE25519_SECRET_LENGTH,
+                    )
+                };
+            }
+            else {
+                let secret_attributes = SecretAttributes::new(
+                    SecretType::Curve25519,
+                    SecretPersistence::Persistent,
+                    CURVE25519_SECRET_LENGTH,
+                );
+            }
         };
 
         let secret_key = vault.async_secret_generate(secret_attributes).await?;
-        let public_key = vault.async_secret_public_key_get(secret_key.clone()).await?;
+        let public_key = vault
+            .async_secret_public_key_get(secret_key.clone())
+            .await?;
 
         let data = CreateKeyChangeData::new(key_attributes, public_key.as_ref().to_vec());
         let data_binary = serde_bare::to_vec(&data).map_err(|_| EntityError::BareError)?;
@@ -171,6 +186,7 @@ impl ProfileState {
             attributes,
             root_key,
             &mut self.vault(),
-        ).await
+        )
+        .await
     }
 }
