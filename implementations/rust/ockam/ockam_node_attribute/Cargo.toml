@@ -22,7 +22,7 @@ proc-macro = true
 
 [features]
 default = ["std"]
-std = []
+std = ["alloc"]
 no_std = []
 alloc = []
 
