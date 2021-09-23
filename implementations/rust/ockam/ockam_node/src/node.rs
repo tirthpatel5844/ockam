@@ -12,6 +12,7 @@ pub struct NullWorker;
 
 impl NullWorker {
     /// Create and register a new NullWorker context
+    #[allow(clippy::new_ret_no_self)]
     pub fn new(
         rt: Arc<Runtime>,
         addr: &Address,

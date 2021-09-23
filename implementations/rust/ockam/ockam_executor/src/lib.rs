@@ -17,6 +17,7 @@
 )]
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(unused_imports)]
+#![allow(clippy::new_without_default)]
 
 #[cfg(feature = "std")]
 #[allow(unused_imports)]

@@ -4,10 +4,10 @@ use ockam::{RemoteForwarder, Result, SecureChannel, TcpTransport, Vault};
 const SECURE_CHANNEL: &str = "xx_channel_listener";
 
 #[ockam::node]
-async fn main(mut ctx: ockam::Context) -> Result<()> {
+async fn main(ctx: ockam::Context) -> Result<()> {
     let vault_address = Vault::create(&ctx)?;
 
-    SecureChannel::create_listener(&mut ctx, SECURE_CHANNEL, &vault_address).await?;
+    SecureChannel::create_listener(&ctx, SECURE_CHANNEL, &vault_address).await?;
 
     let hub_addr = "40.78.99.34:4000";
 
@@ -20,7 +20,7 @@ async fn main(mut ctx: ockam::Context) -> Result<()> {
     // Create the responder worker
     ctx.start_worker("echo_server", server).await?;
 
-    let remote_forwarder = RemoteForwarder::create(&mut ctx, hub_addr, SECURE_CHANNEL).await?;
+    let remote_forwarder = RemoteForwarder::create(&ctx, hub_addr, SECURE_CHANNEL).await?;
     println!(
         "PROXY REMOTE_FORWARDER: {}",
         remote_forwarder.remote_address()

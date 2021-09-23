@@ -1,3 +1,4 @@
+#![allow(clippy::module_inception)]
 mod processor_relay;
 mod relay;
 mod shutdown_handle;

@@ -122,9 +122,9 @@ impl Display for CredentialIdentifier {
     }
 }
 
-impl Into<String> for CredentialIdentifier {
-    fn into(self) -> String {
-        format!("{}{}", Self::PREFIX, &self.0)
+impl From<CredentialIdentifier> for String {
+    fn from(c: CredentialIdentifier) -> Self {
+        format!("{}{}", CredentialIdentifier::PREFIX, &c.0)
     }
 }
 

@@ -56,8 +56,10 @@ pub async fn run_mailbox(mut rx: Receiver<RelayMessage>, mb_tx: Sender<RelayMess
     // Relay messages into the worker mailbox
     while let Some(enc) = rx.recv().await {
         let addr = enc.addr.clone();
-        if mb_tx.send(enc).await.is_err() {
-            panic!("Failed to route message to address '{}'", &addr);
-        };
+        assert!(
+            mb_tx.send(enc).await.is_ok(),
+            "Failed to route message to address '{}'",
+            addr,
+        );
     }
 }

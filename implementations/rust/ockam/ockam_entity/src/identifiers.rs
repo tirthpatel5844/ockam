@@ -34,9 +34,9 @@ impl Display for EntityIdentifier {
     }
 }
 
-impl Into<String> for EntityIdentifier {
-    fn into(self) -> String {
-        format!("{}{}", Self::PREFIX, &self.0)
+impl From<EntityIdentifier> for String {
+    fn from(e: EntityIdentifier) -> String {
+        format!("{}{}", EntityIdentifier::PREFIX, &e.0)
     }
 }
 
@@ -110,7 +110,7 @@ mod test {
         let id1 = EntityIdentifier::random();
 
         let str: String = id1.clone().into();
-        assert!(str.starts_with("P"));
+        assert!(str.starts_with('P'));
 
         let id2: EntityIdentifier = str.try_into().unwrap();
         assert_eq!(id1, id2);

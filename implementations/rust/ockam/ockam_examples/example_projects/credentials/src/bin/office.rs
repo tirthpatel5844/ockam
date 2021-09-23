@@ -29,7 +29,7 @@ async fn main(ctx: Context) -> Result<()> {
     entity.create_credential_issuance_listener(
         OFFICE_ISSUER_ADDRESS,
         credential_type!["TYPE_ID"; "door_id", (Number, "can_open_door")],
-        TrustIdentifierPolicy::new(bob_id.clone()),
+        TrustIdentifierPolicy::new(bob_id),
         // TODO: TrustPolicy doesn't have access to enough data about the requested credential to make a decision
     )?;
 

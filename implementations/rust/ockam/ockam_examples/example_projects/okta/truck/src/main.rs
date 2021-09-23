@@ -159,7 +159,7 @@ fn main() {
     match res.unwrap() {
         OckamMessages::ServiceEnrollmentResponse(data) => {
             match vault.aead_aes_gcm_decrypt(
-                &completed_key_exchange.decrypt_key(),
+                completed_key_exchange.decrypt_key(),
                 data.as_slice(),
                 &[0u8; 12],
                 &completed_key_exchange.h()[..],
@@ -202,7 +202,7 @@ fn main() {
     nonce[11] = 1;
     let ciphertext_and_tag = vault
         .aead_aes_gcm_encrypt(
-            &completed_key_exchange.encrypt_key(),
+            completed_key_exchange.encrypt_key(),
             plaintext.as_bytes(),
             &nonce,
             &completed_key_exchange.h()[..],
@@ -228,7 +228,7 @@ fn main() {
     match res.unwrap() {
         OckamMessages::ServiceEnrollmentResponse(data) => {
             match vault.aead_aes_gcm_decrypt(
-                &completed_key_exchange.decrypt_key(),
+                completed_key_exchange.decrypt_key(),
                 data.as_slice(),
                 &nonce,
                 &completed_key_exchange.h()[..],
@@ -272,7 +272,7 @@ fn main() {
 
             let ctt = vault
                 .aead_aes_gcm_encrypt(
-                    &completed_key_exchange.encrypt_key(),
+                    completed_key_exchange.encrypt_key(),
                     text.as_bytes(),
                     &n,
                     &completed_key_exchange.h()[..],

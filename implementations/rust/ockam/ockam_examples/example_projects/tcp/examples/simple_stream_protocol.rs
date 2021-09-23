@@ -96,7 +96,7 @@ fn get_peer_addr() -> String {
         .take(1)
         .next()
         // This value can be used when running the ockam-hub locally
-        .unwrap_or(format!("127.0.0.1:4000"))
+        .unwrap_or_else(|| "127.0.0.1:4000".to_string())
 }
 
 #[ockam::node]

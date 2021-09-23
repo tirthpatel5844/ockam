@@ -429,7 +429,7 @@ mod tests {
             MSG_3_CIPHERTEXT,
         );
     }
-
+    #[allow(clippy::too_many_arguments)]
     fn mock_handshake(
         init_static: &'static str,
         init_eph: &'static str,

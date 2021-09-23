@@ -67,8 +67,7 @@ fn main() {
     let mut de = serde_json::Deserializer::from_reader(service_stream.try_clone().unwrap());
     loop {
         let res = Messages::deserialize(&mut de);
-        if res.is_err() {
-            let err = res.unwrap_err();
+        if let Err(err) = res {
             match err.classify() {
                 serde_json::error::Category::Eof => {
                     eprintln!("Server closed connection");
@@ -218,59 +217,56 @@ fn main() {
                         service_stream.shutdown(std::net::Shutdown::Both).unwrap();
                         return;
                     }
-                    match res.unwrap() {
-                        OckamMessages::DeviceEnrollmentRequest {
-                            nonce,
-                            blind_device_secret,
-                            ..
-                        } => {
-                            if cred_id != nonce {
-                                println!("fail");
-                                println!("Invalid cred id");
-                                truck_stream.shutdown(std::net::Shutdown::Both).unwrap();
-                                service_stream.shutdown(std::net::Shutdown::Both).unwrap();
-                                return;
-                            }
-                            println!("pass");
-                            print!("Creating credential...");
-                            io::stdout().flush().unwrap();
-                            let mut vault = VAULT.lock().unwrap();
-                            let attributes = vec![
-                                cred_id.to_vec(),
-                                b"Acme Truck".to_vec(),
-                                b"Site B".to_vec(),
-                                b"LTE".to_vec(),
-                            ];
-                            let mut sig_data = Vec::new();
-                            sig_data.extend_from_slice(&blind_device_secret);
-                            let mut hashed_attributes = Vec::new();
-                            hashed_attributes.push(blind_device_secret.to_vec());
-                            for a in &attributes {
-                                let hash = vault.sha256(a.as_slice()).unwrap();
-                                sig_data.extend_from_slice(&hash);
-                                hashed_attributes.push(hash.to_vec());
-                            }
-                            let sig_data = vault.sha256(&sig_data).unwrap();
-                            let sig_key = credential_key.as_ref().unwrap();
-                            let signature = vault.sign(sig_key, &sig_data).unwrap();
-                            serde_json::to_writer(
-                                &mut truck_stream,
-                                &OckamMessages::DeviceEnrollmentResponse {
-                                    schema: services_data[&1].schemas[0].clone(),
-                                    service: x3dh_bundles[&1].clone(),
-                                    attributes,
-                                    attestation: signature.as_ref().to_vec(),
-                                },
-                            )
-                            .unwrap();
-                            println!("done");
-
-                            println!("Closing down");
-                            let _ = truck_stream.shutdown(std::net::Shutdown::Both);
+                    if let OckamMessages::DeviceEnrollmentRequest {
+                        nonce,
+                        blind_device_secret,
+                        ..
+                    } = res.unwrap()
+                    {
+                        if cred_id != nonce {
+                            println!("fail");
+                            println!("Invalid cred id");
+                            truck_stream.shutdown(std::net::Shutdown::Both).unwrap();
                             service_stream.shutdown(std::net::Shutdown::Both).unwrap();
-                            break;
+                            return;
                         }
-                        _ => {}
+                        println!("pass");
+                        print!("Creating credential...");
+                        io::stdout().flush().unwrap();
+                        let mut vault = VAULT.lock().unwrap();
+                        let attributes = vec![
+                            cred_id.to_vec(),
+                            b"Acme Truck".to_vec(),
+                            b"Site B".to_vec(),
+                            b"LTE".to_vec(),
+                        ];
+                        let mut sig_data = Vec::new();
+                        sig_data.extend_from_slice(&blind_device_secret);
+                        let mut hashed_attributes = vec![blind_device_secret.to_vec()];
+                        for a in &attributes {
+                            let hash = vault.sha256(a.as_slice()).unwrap();
+                            sig_data.extend_from_slice(&hash);
+                            hashed_attributes.push(hash.to_vec());
+                        }
+                        let sig_data = vault.sha256(&sig_data).unwrap();
+                        let sig_key = credential_key.as_ref().unwrap();
+                        let signature = vault.sign(sig_key, &sig_data).unwrap();
+                        serde_json::to_writer(
+                            &mut truck_stream,
+                            &OckamMessages::DeviceEnrollmentResponse {
+                                schema: services_data[&1].schemas[0].clone(),
+                                service: x3dh_bundles[&1].clone(),
+                                attributes,
+                                attestation: signature.as_ref().to_vec(),
+                            },
+                        )
+                        .unwrap();
+                        println!("done");
+
+                        println!("Closing down");
+                        let _ = truck_stream.shutdown(std::net::Shutdown::Both);
+                        service_stream.shutdown(std::net::Shutdown::Both).unwrap();
+                        break;
                     }
                 }
                 _ => {}

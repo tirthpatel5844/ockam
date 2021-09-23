@@ -43,7 +43,7 @@ impl Authentication {
         proof: &[u8],
         vault: &mut V,
     ) -> ockam_core::Result<bool> {
-        let proof = AuthenticationProof::decode(&proof).map_err(|_| EntityError::BareError)?;
+        let proof = AuthenticationProof::decode(proof).map_err(|_| EntityError::BareError)?;
 
         vault.verify(proof.signature(), responder_public_key, channel_state)
     }
@@ -63,12 +63,12 @@ mod test {
     }
 
     async fn test_auth_use_case(ctx: &Context) -> ockam_core::Result<()> {
-        let alice_vault = Vault::create(&ctx).expect("failed to create vault");
-        let bob_vault = Vault::create(&ctx).expect("failed to create vault");
+        let alice_vault = Vault::create(ctx).expect("failed to create vault");
+        let bob_vault = Vault::create(ctx).expect("failed to create vault");
 
         // Alice and Bob are distinct Entities.
-        let mut alice = Entity::create(&ctx, &alice_vault)?;
-        let mut bob = Entity::create(&ctx, &bob_vault)?;
+        let mut alice = Entity::create(ctx, &alice_vault)?;
+        let mut bob = Entity::create(ctx, &bob_vault)?;
 
         // Alice and Bob create unique profiles for a Chat app.
         let mut alice_chat = alice.create_profile(&alice_vault)?;
@@ -106,12 +106,12 @@ mod test {
     }
 
     async fn test_key_rotation(ctx: &Context) -> ockam_core::Result<()> {
-        let alice_vault = Vault::create(&ctx).expect("failed to create vault");
-        let bob_vault = Vault::create(&ctx).expect("failed to create vault");
+        let alice_vault = Vault::create(ctx).expect("failed to create vault");
+        let bob_vault = Vault::create(ctx).expect("failed to create vault");
 
         // Alice and Bob are distinct Entities.
-        let mut alice = Entity::create(&ctx, &alice_vault)?;
-        let mut bob = Entity::create(&ctx, &bob_vault)?;
+        let mut alice = Entity::create(ctx, &alice_vault)?;
+        let mut bob = Entity::create(ctx, &bob_vault)?;
 
         // Alice and Bob create unique profiles for a Chat app.
         let mut alice_chat = alice.create_profile(&alice_vault)?;
@@ -126,11 +126,11 @@ mod test {
         let bob_contact = bob_chat.as_contact()?;
 
         // Alice and Bob exchange Contacts. Verification still works with a rotation.
-        if !alice_chat.verify_and_add_contact(bob_contact.clone())? {
+        if !alice_chat.verify_and_add_contact(bob_contact)? {
             return test_error("alice failed to add bob");
         }
 
-        if !bob_chat.verify_and_add_contact(alice_contact.clone())? {
+        if !bob_chat.verify_and_add_contact(alice_contact)? {
             return test_error("bob failed to add alice");
         }
 
@@ -138,11 +138,11 @@ mod test {
     }
 
     async fn test_update_contact_and_reprove(ctx: &Context) -> ockam_core::Result<()> {
-        let alice_vault = Vault::create(&ctx).expect("failed to create vault");
-        let bob_vault = Vault::create(&ctx).expect("failed to create vault");
+        let alice_vault = Vault::create(ctx).expect("failed to create vault");
+        let bob_vault = Vault::create(ctx).expect("failed to create vault");
 
-        let mut alice = Entity::create(&ctx, &alice_vault)?;
-        let mut bob = Entity::create(&ctx, &bob_vault)?;
+        let mut alice = Entity::create(ctx, &alice_vault)?;
+        let mut bob = Entity::create(ctx, &bob_vault)?;
 
         // Alice and Bob create unique profiles for a Chat app.
         let mut alice_chat = alice.create_profile(&alice_vault)?;
@@ -229,9 +229,8 @@ mod test {
             ctx.stop().await.unwrap();
 
             for r in results {
-                match r {
-                    Err(e) => panic!("test failure: {}", e),
-                    _ => (),
+                if let Err(e) = r {
+                    panic!("test failure: {}", e);
                 }
             }
         })

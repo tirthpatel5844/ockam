@@ -19,17 +19,17 @@ use core::cell::RefCell;
 #[cfg(feature = "std")]
 impl<V> Clone for VaultMutex<V> {
     fn clone(&self) -> Self {
-        return Self(self.0.clone());
+        Self(self.0.clone())
     }
 }
 #[cfg(not(feature = "std"))]
 impl<V: Clone> Clone for VaultMutex<V> {
     fn clone(&self) -> Self {
         // TODO @antoinevg - use new no_std mutex wrapper
-        return ockam_node::interrupt::free(|cs| {
+        ockam_node::interrupt::free(|cs| {
             let clone = self.0.borrow(cs).borrow_mut().clone();
             Self(Mutex::new(RefCell::new(clone)))
-        });
+        })
     }
 }
 

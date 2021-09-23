@@ -14,7 +14,7 @@ members = [
     "examples/rust/*/src/..",
     # the example_projects folder has some nesting (for example, in the `okta`
     # project), so we do a recursive glob.
-    "implementations/rust/ockam/ockam_examples/example_projects/**/src/..",
+    #"implementations/rust/ockam/ockam_examples/example_projects/**/src/..",
 
     "tools/ockam-hub-cli",
     "tools/docs/example_runner",

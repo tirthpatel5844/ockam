@@ -42,7 +42,7 @@ pub struct Profile {
 
 impl From<Profile> for Entity {
     fn from(p: Profile) -> Entity {
-        Entity::new(p.handle.clone(), Some(p.id.clone()))
+        Entity::new(p.handle.clone(), Some(p.id))
     }
 }
 

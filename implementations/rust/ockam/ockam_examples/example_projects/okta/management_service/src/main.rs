@@ -119,7 +119,7 @@ impl OktaIntrospectResponse {
     //}
 
     pub fn username(&self) -> String {
-        self.username.clone().unwrap_or(String::new())
+        self.username.clone().unwrap_or_default()
     }
 
     // /// An example of extracting the scope
@@ -163,7 +163,7 @@ fn start(cfg: &config::Config, data: &OktaData, query: OktaOpenIdResponse) {
 
     print!("Obtaining access token...");
     stdout.flush().unwrap();
-    let res = exchange_code_for_access_token(&cfg, &data, &query.code);
+    let res = exchange_code_for_access_token(cfg, data, &query.code);
     if res.is_err() {
         fail("fail");
         eprintln!("Unable to get access token from okta: {:?}", res);
@@ -173,7 +173,7 @@ fn start(cfg: &config::Config, data: &OktaData, query: OktaOpenIdResponse) {
     print!("Inspecting user information...");
     stdout.flush().unwrap();
     let creds = res.unwrap();
-    let res = introspect(&cfg, &creds.access_token);
+    let res = introspect(cfg, &creds.access_token);
     if res.is_err() {
         fail("fail");
         eprintln!("Unable to introspect access token from okta: {:?}", res);
@@ -294,12 +294,13 @@ async fn main() {
         config::Config::from_args()
     };
 
-    let mut okta_data = OktaData::default();
-
-    okta_data.redirect_uri = format!(
-        "http://localhost:{}/authorization-code/callback",
-        cfg.okta_port
-    );
+    let okta_data = OktaData {
+        redirect_uri: format!(
+            "http://localhost:{}/authorization-code/callback",
+            cfg.okta_port
+        ),
+        ..OktaData::default()
+    };
 
     // println!("Open the following URL in a browser to continue");
     // println!("{}/oauth2/default/v1/authorize?response_type=code&client_id={}&redirect_uri={}&state={}&nonce={}&scope=openid",
@@ -342,9 +343,8 @@ fn channel_listener() {
     loop {
         listener.set_nonblocking(true).unwrap();
         let res = listener.accept();
-        if res.is_err() {
-            let err = res.unwrap_err();
-            match err.kind() {
+        match res {
+            Err(err) => match err.kind() {
                 io::ErrorKind::WouldBlock => {
                     if connections.is_empty() {
                         sleep(std::time::Duration::from_millis(1000));
@@ -353,11 +353,11 @@ fn channel_listener() {
                 _ => {
                     eprintln!("{:?}", err);
                 }
+            },
+            Ok((stream, addr)) => {
+                println!("Connection from {:?}", addr);
+                connections.push(stream);
             }
-        } else {
-            let (stream, addr) = res.unwrap();
-            println!("Connection from {:?}", addr);
-            connections.push(stream);
         }
 
         let mut i = 0;
@@ -367,8 +367,7 @@ fn channel_listener() {
             let mut de = serde_json::Deserializer::from_reader(stream.try_clone().unwrap());
 
             let res = Messages::deserialize(&mut de);
-            if res.is_err() {
-                let err = res.unwrap_err();
+            if let Err(err) = res {
                 match err.classify() {
                     serde_json::error::Category::Io => {
                         sleep(std::time::Duration::from_millis(1000));
@@ -596,7 +595,7 @@ fn channel_listener() {
                                     let kex = resp.finalize().unwrap();
                                     let ctt = xxvault
                                         .aead_aes_gcm_encrypt(
-                                            &kex.encrypt_key(),
+                                            kex.encrypt_key(),
                                             &[1],
                                             &[0u8; 12],
                                             &kex.h()[..],
@@ -618,7 +617,7 @@ fn channel_listener() {
                         let mut n = [0u8; 12];
                         n[11] = 1;
                         let res = xxvault.aead_aes_gcm_decrypt(
-                            &kex.decrypt_key(),
+                            kex.decrypt_key(),
                             data.as_slice(),
                             &n,
                             &kex.h()[..],
@@ -637,7 +636,7 @@ fn channel_listener() {
                                         let sig_data = xxvault.sha256(&sig_data).unwrap();
                                         let signature = *array_ref![attestation.signature, 0, 64];
                                         let mut verified = false;
-                                        for (_, keys) in &enrollers {
+                                        for keys in enrollers.values() {
                                             for key in keys {
                                                 if xxvault
                                                     .verify(
@@ -660,7 +659,7 @@ fn channel_listener() {
                                         n[11] = 2;
                                         let ctt = xxvault
                                             .aead_aes_gcm_encrypt(
-                                                &kex.encrypt_key(),
+                                                kex.encrypt_key(),
                                                 &[verified as u8],
                                                 &n,
                                                 &kex.h()[..],
@@ -684,7 +683,7 @@ fn channel_listener() {
                         n[10..].copy_from_slice(&nonce.to_be_bytes());
                         let kex = completed_key_exchange.as_ref().unwrap();
                         match xxvault.aead_aes_gcm_decrypt(
-                            &kex.decrypt_key(),
+                            kex.decrypt_key(),
                             data.as_slice(),
                             &n,
                             &kex.h()[..],

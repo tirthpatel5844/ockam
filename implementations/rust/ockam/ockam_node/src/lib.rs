@@ -8,6 +8,9 @@
     unused_import_braces,
     unused_qualifications
 )]
+// FIXME: We have a lot of functions that take `&Vec<u8>` because of
+// `ockam_core::Encoded`
+#![allow(clippy::ptr_arg)]
 #![cfg_attr(not(feature = "std"), no_std)]
 
 #[cfg(feature = "std")]
@@ -61,7 +64,7 @@ use tokio::{runtime::Runtime, task};
 /// tokio.
 #[doc(hidden)]
 #[cfg(feature = "std")]
-pub fn block_future<'r, F>(rt: &'r Runtime, f: F) -> <F as Future>::Output
+pub fn block_future<F>(rt: &Runtime, f: F) -> <F as Future>::Output
 where
     F: Future + Send,
     F::Output: Send,

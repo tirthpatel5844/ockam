@@ -53,7 +53,7 @@ async fn main(ctx: Context) {
 
     // Update the last worker to have the first worker as 'next'
     if let Some(last) = workers.last_mut() {
-        last.next = Some(format!("io.ockam.ring0").into());
+        last.next = Some("io.ockam.ring0".to_string().into());
     }
 
     // Start all the workers

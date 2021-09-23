@@ -103,7 +103,7 @@ impl Worker for VerifierWorker {
                     let credential_is_valid = self.profile.verify_credential_presentation(
                         &presentation,
                         &manifest,
-                        id.clone(),
+                        *id,
                     )?;
 
                     // TODO: Add some mechanism to identify participant as an owner of the valid credential

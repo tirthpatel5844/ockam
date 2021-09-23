@@ -3,6 +3,7 @@ use core::fmt::Debug;
 
 /// Error declarations.
 #[derive(Clone, Copy, Debug)]
+#[allow(clippy::enum_variant_names)]
 pub enum Error {
     /// No error
     None,

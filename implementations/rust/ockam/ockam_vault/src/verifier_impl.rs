@@ -29,7 +29,7 @@ impl Verifier for SoftwareVault {
                 ::signature_bls::PublicKey::from_bytes(array_ref!(public_key.as_ref(), 0, 96))
                     .unwrap();
             let generators = MessageGenerators::from_public_key(bls_public_key, 1);
-            let messages = [Message::hash(data.as_ref())];
+            let messages = [Message::hash(data)];
             let signature_array = array_ref!(signature.as_ref(), 0, 112);
             let signature_bbs = BBSSignature::from_bytes(signature_array).unwrap();
             let res = signature_bbs.verify(&bls_public_key, &generators, messages.as_ref());

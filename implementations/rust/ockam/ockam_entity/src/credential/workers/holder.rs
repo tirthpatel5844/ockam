@@ -10,6 +10,7 @@ use ockam_core::compat::{boxed::Box, vec::Vec};
 use ockam_core::{Address, Result, Route, Routed, Worker};
 use ockam_node::Context;
 
+#[allow(clippy::large_enum_variant)]
 enum State {
     AcceptOffer,
     CombineFragments(SigningPublicKey, CredentialFragment1),
@@ -110,7 +111,7 @@ impl Worker for HolderWorker {
                     let entity_credential = EntityCredential::new(
                         credential.clone(),
                         bbs_credential,
-                        issuer_pubkey.clone(),
+                        *issuer_pubkey,
                         self.schema.clone(),
                     );
 

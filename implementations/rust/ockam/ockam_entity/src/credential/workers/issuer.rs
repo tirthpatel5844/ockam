@@ -46,7 +46,7 @@ impl Worker for IssuerWorker {
     async fn initialize(&mut self, ctx: &mut Self::Context) -> Result<()> {
         if let State::CreateOffer(return_route) = &self.state {
             let offer = self.profile.create_offer(&self.schema)?;
-            let offer_id = offer.id.clone();
+            let offer_id = offer.id;
             ctx.send(
                 return_route.clone(),
                 CredentialProtocolMessage::IssueOffer(offer),
@@ -89,7 +89,7 @@ impl Worker for IssuerWorker {
                         &request,
                         &self.schema,
                         &(signing_attributes.clone()),
-                        offer_id.clone(),
+                        *offer_id,
                     )?;
 
                     ctx.send(route, CredentialProtocolMessage::IssueResponse(frag2))

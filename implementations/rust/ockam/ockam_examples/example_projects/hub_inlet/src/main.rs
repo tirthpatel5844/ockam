@@ -27,7 +27,7 @@ impl TcpInletService {
             panic!("Ports range is empty");
         }
 
-        let available_ports = available_inlet_ports.clone();
+        let available_ports = available_inlet_ports;
 
         let ttl_display = if let Some(t) = inlet_ttl_secs {
             t.as_secs() as i32

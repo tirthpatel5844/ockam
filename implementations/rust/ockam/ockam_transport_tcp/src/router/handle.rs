@@ -100,9 +100,9 @@ impl TcpRouterHandle {
             hostnames = vec![];
         }
         // Try to resolve hostname
-        else if let Ok(iter) = peer_str.to_socket_addrs() {
+        else if let Ok(mut iter) = peer_str.to_socket_addrs() {
             // FIXME: We only take ipv4 for now
-            if let Some(p) = iter.filter(|x| x.is_ipv4()).next() {
+            if let Some(p) = iter.find(|x| x.is_ipv4()) {
                 peer_addr = p;
             } else {
                 return Err(TransportError::InvalidAddress.into());

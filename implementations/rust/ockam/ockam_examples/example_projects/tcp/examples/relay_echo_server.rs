@@ -10,7 +10,7 @@ fn get_peer_addr() -> String {
         .take(1)
         .next()
         // This value can be used when running the ockam-hub locally
-        .unwrap_or(format!("127.0.0.1:4000"))
+        .unwrap_or_else(|| "127.0.0.1:4000".to_string())
 }
 
 /// A worker who isn't always available.  It registers itself with the
@@ -39,7 +39,7 @@ impl Worker for ProxiedWorker {
     async fn handle_message(&mut self, _: &mut Context, msg: Routed<Self::Message>) -> Result<()> {
         // This condition is true when we receive the forwarding route
         // from registration - print this route for the user to copy
-        if &msg.as_str() == &"register" {
+        if msg.as_str() == "register" {
             info!("You can reach me via this route: {}", msg.return_route());
         }
         // This condition is true when we receive a message that is

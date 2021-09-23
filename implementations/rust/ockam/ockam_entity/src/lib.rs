@@ -10,6 +10,7 @@
     unused_qualifications,
     // warnings
 )]
+#![allow(clippy::large_enum_variant)]
 #![cfg_attr(not(feature = "std"), no_std)]
 
 #[cfg(feature = "std")]
@@ -270,15 +271,15 @@ mod test {
                 let mut alice = entity_alice.current_profile().unwrap();
                 let mut bob = entity_bob.current_profile().unwrap();
 
-                let mut results = vec![];
-                results.push(test_basic_profile_key_ops(&mut alice));
-                results.push(test_update_contact_after_change(&mut alice, &mut bob));
+                let results = vec![
+                    test_basic_profile_key_ops(&mut alice),
+                    test_update_contact_after_change(&mut alice, &mut bob),
+                ];
                 ctx.stop().await.unwrap();
 
                 for r in results {
-                    match r {
-                        Err(e) => panic!("{}", e.domain().clone()),
-                        _ => (),
+                    if let Err(e) = r {
+                        panic!("{}", e.domain().clone());
                     }
                 }
             })

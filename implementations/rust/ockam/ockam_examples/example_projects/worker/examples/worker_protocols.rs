@@ -8,9 +8,8 @@ struct MyWorker {
 
 /// Util function that maps stream-protocol responses to worker state
 fn handle_stream(w: &mut MyWorker, _: &mut Context, r: Routed<Response>) -> bool {
-    match r.body() {
-        Response::Init(Init { stream_name }) => w.stream = Some(stream_name),
-        _ => {}
+    if let Response::Init(Init { stream_name }) = r.body() {
+        w.stream = Some(stream_name)
     }
     true // XXX(thom): unsure if true or false is what this should be returning...
 }
