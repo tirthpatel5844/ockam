@@ -79,6 +79,14 @@ fn run_stage(stage: Stage) -> Result<()> {
             std::process::exit(0);
         }
 
+        let step = step.clone();
+        let step_and_args = step.split_whitespace();
+        let mut args = Vec::from(["run".to_string(), "--example".to_string()]);
+
+        for arg in step_and_args {
+            args.push(arg.to_string())
+        }
+
         let output_file = format!("/tmp/exrun-{}", rand::thread_rng().next_u32());
         outputs.push(output_file.clone());
 
@@ -88,8 +96,10 @@ fn run_stage(stage: Stage) -> Result<()> {
             stdin += "\n";
         }
 
+        println!("Out: {:#?}", output_file);
+
         let join_handle = std::thread::spawn(move || {
-            let handle = cmd!("cargo", "run", "--example", step)
+            let handle = cmd("cargo", args)
                 .stdout_file(File::create(output_file.clone()).unwrap())
                 .stdin_bytes(stdin)
                 .start()
