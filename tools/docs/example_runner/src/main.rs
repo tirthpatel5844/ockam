@@ -5,6 +5,7 @@ use ron::de::from_str;
 use serde::Deserialize;
 use std::fs::File;
 use std::io::Read;
+use std::net::SocketAddr;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering::Relaxed;
 use std::sync::{Arc, Mutex};
@@ -73,6 +74,22 @@ fn run_stage(stage: Stage) -> Result<()> {
             let matching = match_stack.get(index).unwrap();
             out_order.push(matching.clone());
             continue;
+        }
+
+        if step.starts_with("tcp ") {
+            let step = step.split_off(4);
+            let mut args = step.split(" ");
+            let bytes = args.next().expect("missing tcp read length");
+            let addr = args.next().expect("missing tcp host:port");
+            let tcp_match = args.next().expect("expect byte match");
+
+            let addr: SocketAddr = addr.parse()?;
+            let mut tcp = std::net::TcpStream::connect(addr)?;
+            let bytes: usize = bytes.parse().expect("invalid tcp read length");
+            let mut buf: Vec<u8> = Vec::with_capacity(bytes);
+            tcp.read(&mut buf)?;
+
+            buf.
         }
 
         if step.starts_with("quit") {

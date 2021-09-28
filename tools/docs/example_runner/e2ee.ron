@@ -1,7 +1,10 @@
 (
     title: "E2EE",
     stages: [
-        ["inlet arg1"],
-        ["match arg1"]
+        [
+            "01-inlet-outlet 127.0.0.1:4001 india.colorado.edu:13",
+            "match Initializing ockam node",
+            "sleep 1"
+        ],
     ]
 )
