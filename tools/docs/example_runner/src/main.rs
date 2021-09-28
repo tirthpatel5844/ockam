@@ -6,8 +6,8 @@ use serde::Deserialize;
 use std::fs::File;
 use std::io::Read;
 use std::net::SocketAddr;
-use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering::Relaxed;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread::sleep;
 use std::time::Duration;
@@ -34,6 +34,11 @@ fn run_stage(stage: Stage) -> Result<()> {
 
     for mut step in stage {
         let stop = stop.clone();
+
+        if stop.load(Ordering::Relaxed) {
+            break;
+        }
+
         let finished = finished.clone();
         let join_handles = join_handles.clone();
 
@@ -88,12 +93,19 @@ fn run_stage(stage: Stage) -> Result<()> {
             let bytes: usize = bytes.parse().expect("invalid tcp read length");
             let mut buf: Vec<u8> = Vec::with_capacity(bytes);
             tcp.read(&mut buf)?;
-
-            buf.
+            let buf = String::from_utf8(buf)?;
+            if !buf.contains(tcp_match) {
+                println!(
+                    "No match for '{}' in TCP response from '{}'. Got '{}'",
+                    tcp_match, addr, buf
+                );
+                break;
+            }
+            continue;
         }
 
         if step.starts_with("quit") {
-            std::process::exit(0);
+            break;
         }
 
         let step = step.clone();
@@ -145,6 +157,7 @@ fn run_stage(stage: Stage) -> Result<()> {
         join_handles.lock().unwrap().push(join_handle);
         sleep(Duration::from_secs(2));
     }
+    stop.store(true, Relaxed);
 
     while !finished.load(Relaxed) {
         sleep(Duration::from_secs(1));
