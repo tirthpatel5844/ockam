@@ -5,7 +5,8 @@
             "01-inlet-outlet 127.0.0.1:4001 india.colorado.edu:13",
             "match Initializing ockam node",
             "sleep 1",
-            "tcp 48 127.0.0.1:4001 NIST"
+            "http http://neverssl.com:80 NeverSSL",
+            "quit"
         ],
     ]
 )

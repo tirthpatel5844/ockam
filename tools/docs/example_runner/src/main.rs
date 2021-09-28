@@ -5,7 +5,6 @@ use ron::de::from_str;
 use serde::Deserialize;
 use std::fs::File;
 use std::io::Read;
-use std::net::SocketAddr;
 use std::sync::atomic::Ordering::Relaxed;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
@@ -81,30 +80,23 @@ fn run_stage(stage: Stage) -> Result<()> {
             continue;
         }
 
-        if step.starts_with("tcp ") {
-            let step = step.split_off(4);
+        if step.starts_with("http ") {
+            let step = step.split_off(5);
             let mut args = step.split(" ");
-            let bytes = args.next().expect("missing tcp read length");
-            let addr = args.next().expect("missing tcp host:port");
-            let tcp_match = args.next().expect("expect byte match");
+            let addr = args.next().expect("missing url");
+            let http_match = args.next().expect("expect byte match");
 
-            let addr: SocketAddr = addr.parse()?;
-            let mut tcp = std::net::TcpStream::connect(addr)?;
-            let bytes: usize = bytes.parse().expect("invalid tcp read length");
-            let mut buf: Vec<u8> = Vec::with_capacity(bytes);
-            tcp.read(&mut buf)?;
-            let buf = String::from_utf8(buf)?;
-            if !buf.contains(tcp_match) {
-                println!(
-                    "No match for '{}' in TCP response from '{}'. Got '{}'",
-                    tcp_match, addr, buf
-                );
+            println!("Addr: {}", addr);
+            let response = reqwest::blocking::get(addr)?.text()?;
+            if !response.contains(http_match) {
+                println!("No match for '{}' in response from '{}'", http_match, addr);
                 break;
             }
             continue;
         }
 
         if step.starts_with("quit") {
+            println!("Quit");
             break;
         }
 
@@ -157,19 +149,26 @@ fn run_stage(stage: Stage) -> Result<()> {
         join_handles.lock().unwrap().push(join_handle);
         sleep(Duration::from_secs(2));
     }
+
+    println!("Waiting for tasks to stop");
+
     stop.store(true, Relaxed);
 
     while !finished.load(Relaxed) {
         sleep(Duration::from_secs(1));
     }
 
-    stop.store(true, Relaxed);
+    println!("Joining tasks");
+
     let join_handles = join_handles.clone();
     let mut join_handles = join_handles.lock().unwrap();
     while !join_handles.is_empty() {
         let h = join_handles.pop().unwrap();
         h.join().unwrap();
     }
+
+    println!("Done");
+
     Ok(())
 }
 
