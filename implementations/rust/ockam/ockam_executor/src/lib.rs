@@ -57,7 +57,7 @@ pub mod tokio {
 ///
 /// TODO Provide a std::sync::Mutex compatible mutex interface and
 /// abstract the implementations into the target specific crates.
-#[cfg(not(feature = "std"))]
+#[cfg(all(not(feature = "std"), feature = "cortexm"))]
 pub mod interrupt {
     pub use cortex_m::interrupt::{free, Mutex};
 }
