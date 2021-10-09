@@ -12,6 +12,8 @@ on:
       - 'settings.gradle'
       - 'implementations/rust/settings.gradle'
       - 'implementations/rust/ockam/ockam_core/**'
+      # Automatically run this workflow if its content is updated
+      - '.github/workflows/rust_build_ockam_ockam_core.yml'
 
 jobs:
   rust_build_ockam_ockam_core:
