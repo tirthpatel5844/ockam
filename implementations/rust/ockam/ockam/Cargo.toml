@@ -80,7 +80,7 @@ ockam_key_exchange_xx = { path = "../ockam_key_exchange_xx", version = "0.26.0" 
 ockam_entity = { path = "../ockam_entity", version = "0.23.0"   , default_features = false }
 arrayref = "0.3"
 async-trait = "0.1"
-bls12_381_plus = { version = "0.5", default-features = false }
+bls12_381_plus = { version = "0.6", default-features = false }
 signature_core = { version = "0.26.0"       , path = "../signature_core" }
 signature_bbs_plus = { version = "0.26.0"       , path = "../signature_bbs_plus", package = "signature_bbs_plus" }
 signature_bls = { version = "0.24.0"       , path = "../signature_bls", package = "signature_bls" }
