@@ -1,48 +1,51 @@
-use crate::relay::{ShutdownHandle, ShutdownListener};
 use crate::tokio::runtime::Runtime;
-use crate::{error::Error, Context};
+use crate::Context;
 use ockam_core::{Processor, Result};
+
+pub(crate) static PROC_ADDR_SUFFIX: &'static str = "__ockam.internal.proc";
 
 pub struct ProcessorRelay<P>
 where
     P: Processor<Context = Context>,
 {
     processor: P,
-    ctx: Context,
-    shutdown_listener: ShutdownListener,
+    main: Context,
+    aux: Context,
 }
 
 impl<P> ProcessorRelay<P>
 where
     P: Processor<Context = Context>,
 {
-    pub fn new(processor: P, ctx: Context, shutdown_listener: ShutdownListener) -> Self {
+    pub fn new(processor: P, main: Context, aux: Context) -> Self {
         Self {
             processor,
-            ctx,
-            shutdown_listener,
+            main,
+            aux,
         }
     }
 
     async fn run(self) {
-        let (rx_shutdown, tx_ack) = self.shutdown_listener.consume();
-        let mut ctx = self.ctx;
+        let mut main = self.main;
+        let mut aux = self.aux;
         let mut processor = self.processor;
+        let main_addr = main.address();
 
-        match processor.initialize(&mut ctx).await {
+        match processor.initialize(&mut main).await {
             Ok(()) => {}
             Err(e) => {
                 error!(
                     "Failure during '{}' processor initialisation: {}",
-                    ctx.address(),
+                    main.address(),
                     e
                 );
             }
         }
 
+        // This future encodes the main processor run loop logic
         let run_loop = async {
             loop {
-                let should_continue = processor.process(&mut ctx).await?;
+                let should_continue = processor.process(&mut main).await?;
                 if !should_continue {
                     break;
                 }
@@ -51,82 +54,32 @@ where
             Result::<()>::Ok(())
         };
 
-        #[allow(dead_code)]
-        #[derive(Debug)]
-        enum StopReason {
-            Shutdown,
-            LoopStop,
-            ProcessError(ockam_core::Error),
-            RxError(ockam_core::Error),
-        }
-
-        #[cfg(feature = "std")]
-        let stop_reason;
-        #[cfg(feature = "std")]
-        tokio::select! {
-            res = rx_shutdown => {
-                match res {
-                    Ok(_) => stop_reason = StopReason::Shutdown,
-                    Err(_) => stop_reason = StopReason::RxError(Error::ShutdownRxError.into()),
-                }
-            }
-            res = run_loop => {
-                match res {
-                    Ok(_) => stop_reason = StopReason::LoopStop,
-                    Err(err) => stop_reason = StopReason::ProcessError(err),
-                }
-            }
-        }
-
-        // TODO wait on run_loop until we have a no_std select! implementation
-        #[cfg(not(feature = "std"))]
-        let stop_reason = match run_loop.await {
-            Ok(_) => StopReason::LoopStop,
-            Err(err) => StopReason::ProcessError(err),
+        // This future resolves when the mailbox sender is dropped
+        let shutdown_signal = async {
+            while let Some(_) = aux.mailbox_next().await {}
+            Result::<()>::Ok(())
         };
 
-        match processor.shutdown(&mut ctx).await {
+        // Then select over the two futures
+        tokio::select! {
+            _ = shutdown_signal => {
+                info!("Shutting down processor {}", main_addr);
+            },
+            _ = run_loop => {}
+        };
+
+        // If we reach this point the router has signalled us to shut down
+        match processor.shutdown(&mut main).await {
             Ok(()) => {}
             Err(e) => {
-                error!(
-                    "Failure during '{}' processor shutdown: {}",
-                    ctx.address(),
-                    e
-                );
+                error!("Failure during '{}' processor shutdown: {}", main_addr, e);
             }
         }
-
-        if let Err(_) = tx_ack.send(()) {
-            error!("Failure during shutdown ack '{}'", ctx.address())
-        }
-
-        debug!(
-            "Stopping processor '{}' with reason {:?}",
-            ctx.address(),
-            stop_reason
-        );
-
-        match stop_reason {
-            StopReason::Shutdown => {}
-            StopReason::LoopStop => {
-                if let Err(err) = ctx.stop_processor(ctx.address()).await {
-                    error!("Failure during '{}' processor stop: {}", ctx.address(), err)
-                }
-            }
-            StopReason::ProcessError(err) | StopReason::RxError(err) => {
-                error!("Processor '{}' error: {}", ctx.address(), err)
-            }
-        };
     }
 
-    pub(crate) fn build(rt: &Runtime, processor: P, ctx: Context) -> ShutdownHandle
-    where
-        P: Processor<Context = Context>,
-    {
-        let (handle, listener) = ShutdownHandle::create();
-        let relay = ProcessorRelay::<P>::new(processor, ctx, listener);
-
+    /// Create a processor relay with two node contexts
+    pub(crate) fn init(rt: &Runtime, processor: P, main: Context, aux: Context) {
+        let relay = ProcessorRelay::<P>::new(processor, main, aux);
         rt.spawn(relay.run());
-        handle
     }
 }

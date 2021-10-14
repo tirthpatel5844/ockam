@@ -159,6 +159,13 @@ impl Address {
     pub fn random(tt: u8) -> Self {
         Self { tt, ..random() }
     }
+
+    /// Create a new address with a suffix
+    pub fn suffix<S: Into<String>>(&self, s: S) -> Self {
+        let mut inner = self.inner.clone();
+        inner.append(&mut s.into().as_bytes().to_vec());
+        Self { inner, tt: self.tt }
+    }
 }
 impl core::str::FromStr for Address {
     type Err = AddressParseError;
