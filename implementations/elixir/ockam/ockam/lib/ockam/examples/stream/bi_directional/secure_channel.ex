@@ -33,6 +33,10 @@ defmodule Ockam.Examples.Stream.BiDirectional.SecureChannel do
   alias Ockam.Stream.Client.BiDirectional
   alias Ockam.Stream.Client.BiDirectional.PublisherRegistry
 
+  alias Ockam.Messaging.PipeChannel
+
+  alias Ockam.Messaging.Ordering.Monotonic.IndexPipe
+
   alias Ockam.Transport.TCP
 
   require Logger
@@ -74,6 +78,12 @@ defmodule Ockam.Examples.Stream.BiDirectional.SecureChannel do
 
     create_secure_channel_listener()
 
+    {:ok, "ord_channel_spawner"} =
+      PipeChannel.Spawner.create(
+        responder_options: [pipe_mods: IndexPipe],
+        address: "ord_channel_spawner"
+      )
+
     config = config()
     ## Create a local subscription to forward pong_topic messages to local node
     subscribe(config.pong_stream, "pong", :tcp)
@@ -93,7 +103,13 @@ defmodule Ockam.Examples.Stream.BiDirectional.SecureChannel do
     ## messages to send responses to ping_topic
     {:ok, publisher} = init_publisher(config.pong_stream, config.ping_stream, "ping", :tcp)
 
-    {:ok, channel} = create_secure_channel([publisher, "SC_listener"])
+    {:ok, ord_channel} =
+      PipeChannel.Initiator.create(
+        pipe_mods: IndexPipe,
+        spawner_route: [publisher, "ord_channel_spawner"]
+      )
+
+    {:ok, channel} = create_secure_channel([ord_channel, "SC_listener"])
 
     ## Send a message THROUGH the local publisher to the remote worker
     send_message([channel, "pong"], ["ping"], "0")
